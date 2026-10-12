@@ -1,0 +1,19 @@
+# Dev / integration-test Navidrome with two libraries ("Main" and "Live").
+#   scripts/generate-sample-music.sh            # once: create ./docker/music
+#   docker compose -f docker/compose.dev.yml up -d
+#   pnpm navidrome:setup                        # once: admin, libraries, app user
+services:
+  navidrome:
+    image: deluan/navidrome:0.64.2
+    ports: ['4533:4533']
+    environment:
+      ND_MUSICFOLDER: /music/main
+      ND_SCANNER_SCHEDULE: '0'
+      ND_LOGLEVEL: info
+    volumes:
+      - ./music/main:/music/main:ro
+      - ./music/live:/music/live:ro
+      - navidrome-data:/data
+
+volumes:
+  navidrome-data:

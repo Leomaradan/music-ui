@@ -164,3 +164,6 @@ next-env.d.ts
 
 # Test output
 coverage/
+
+# Generated sample music for the dev Navidrome
+/docker/music/

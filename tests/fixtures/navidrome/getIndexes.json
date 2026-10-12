@@ -1,0 +1,41 @@
+{
+  "subsonic-response": {
+    "status": "ok",
+    "version": "1.16.1",
+    "type": "navidrome",
+    "serverVersion": "0.64.2 (10114574)",
+    "openSubsonic": true,
+    "indexes": {
+      "index": [
+        {
+          "name": "A",
+          "artist": [
+            {
+              "id": "4ByFDbM4ptBfCcuCLGd8eA",
+              "name": "ABBA",
+              "coverArt": "ar-4ByFDbM4ptBfCcuCLGd8eA",
+              "artistImageUrl": "http://localhost:4533/share/img/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFyLTRCeUZEYk00cHRCZkNjdUNMR2Q4ZUEiLCJpc3MiOiJORCJ9.h4lFR7jdq9ItratoNblZMgqEhhOVDNvouzNg3Fof3P0?size=600"
+            },
+            {
+              "id": "3IuN91bZn6R4OGPP2GYfdO",
+              "name": "Aerosmith",
+              "coverArt": "ar-3IuN91bZn6R4OGPP2GYfdO",
+              "artistImageUrl": "http://localhost:4533/share/img/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImFyLTNJdU45MWJabjZSNE9HUFAyR1lmZE8iLCJpc3MiOiJORCJ9.ItEHRo_fk0IqCeWkN2pA2WO3j7K6cHf8lwEKDgGBTaY?size=600"
+            }
+          ]
+        },
+        {
+          "name": "V",
+          "artist": [
+            {
+              "id": "63sqASlAfjbGMuLP4JhnZU",
+              "name": "Various Artists"
+            }
+          ]
+        }
+      ],
+      "lastModified": 1791789700000,
+      "ignoredArticles": "The El La Los Las Le Les Os As O A"
+    }
+  }
+}

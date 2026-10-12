@@ -16,7 +16,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:integration": "SUBSONIC_TEST_URL=${SUBSONIC_TEST_URL:-http://localhost:4533} vitest run tests/integration",
+    "navidrome:music": "sh scripts/generate-sample-music.sh",
+    "navidrome:setup": "node scripts/setup-dev-navidrome.mjs"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",
@@ -27,7 +30,9 @@
     "@mui/material-nextjs": "^9.5.0",
     "next": "^16.4.0",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "server-only": "^0.0.1",
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.2",
