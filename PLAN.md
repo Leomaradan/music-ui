@@ -1,159 +1,230 @@
-# Music UI — Base Application Plan
+# Music UI — Application Plan
 
-Scope of this plan: the **foundation** only. It covers running the app in Docker on a NAS, talking to a private Subsonic server through a server-side proxy, and listing music across several Subsonic music folders. UI features (player, queue, playlists, search UX, theming, and so on) will be specified later and are out of scope here.
+A self-hosted web music player in the style of a desktop music library: a column browser with cascading filters and a track table. It runs in Docker on an **Unraid** server and uses a private **Airsonic** server as its music backend.
+
+- **Phase 1 (base):** running, configuration, Subsonic proxy, music catalog, listing.
+- **Phase 2 (UI):** player bar, playlists sidebar, cascading filters, track table, drag & drop.
 
 ---
 
-## 1. Goals & constraints
+## 1. Context & decisions
 
-| Constraint | Consequence for the design |
+| Topic | Decision |
 |---|---|
-| Hosted as a Docker container on a NAS | Small image built with Next.js `standalone` output, configured at **runtime** through env vars, multi-arch build (amd64 + arm64) |
-| Subsonic server is **not public**, LAN only | The browser never talks to Subsonic. The Next.js server is the only thing that does, so it acts as a **BFF / proxy** |
-| Next.js + Material UI | App Router, React Server Components for data pages, MUI with the App Router emotion cache integration |
-| App revolves around **multiple music folders** | The "current music folder" is a first-class concept in routing, in the API layer and in the UI shell |
-
-Non-goals for this phase: playback UI, scrobbling, playlists editing, offline mode, multi-server.
+| Host | Unraid, x86-64 → image built for `linux/amd64` only |
+| Backend | **Airsonic** (Subsonic API ≤ 1.15/1.16, **no OpenSubsonic extensions**) |
+| Network | **LAN only**, plain HTTP. Airsonic is reachable only from the app container |
+| Accounts | **One shared Airsonic account** configured by env vars. The app has **no login screen** |
+| Stack | Next.js (App Router, TypeScript) + Material UI, Node.js **26 LTS** (`node:26-alpine`) |
+| Music folders | First-class concept: the first filter box, and an "all folders" state when nothing is selected |
 
 ---
 
 ## 2. Architecture
 
 ```
-┌──────────── Browser (LAN / VPN) ────────────┐
-│  Next.js client components (MUI)            │
-│  <img src="/api/cover/…">  <audio src="/api/stream/…">
-└───────────────┬─────────────────────────────┘
-                │ HTTP (only the app's origin)
-┌───────────────▼──────────── Docker container on NAS ───────────┐
-│ Next.js server (Node runtime)                                  │
-│  ├─ Server Components ──► lib/subsonic (typed client)          │
-│  ├─ Route handlers  /api/stream, /api/cover, /api/health …     │
-│  ├─ Session (encrypted httpOnly cookie)                        │
-│  └─ Subsonic credentials NEVER leave the server                │
+┌──────────────────────── Browser (LAN) ─────────────────────────┐
+│ Single-page UI (client components, MUI)                        │
+│  • catalog store (all tracks, in memory) → facets & table      │
+│  • player (<audio src="/api/stream/:id">)                      │
 └───────────────┬────────────────────────────────────────────────┘
-                │ HTTP on LAN / docker network (SUBSONIC_URL)
+                │ HTTP, app origin only
+┌───────────────▼──────────── Docker container (Unraid) ─────────┐
+│ Next.js server (Node 26)                                       │
+│  ├─ lib/subsonic      typed Airsonic client (server-only)      │
+│  ├─ lib/catalog       sync job: Airsonic → SQLite (/data)      │
+│  ├─ /api/catalog      compact catalog snapshot (ETag)          │
+│  ├─ /api/stream/:id   audio proxy (Range passthrough)          │
+│  ├─ /api/cover/:id    cover art proxy (cached)                 │
+│  ├─ /api/playlists…   playlist CRUD → Airsonic                 │
+│  └─ /api/health                                                │
+└───────────────┬────────────────────────────────────────────────┘
+                │ HTTP on LAN (SUBSONIC_URL), shared account
 ┌───────────────▼───────────┐
-│ Subsonic-compatible server │  (Navidrome, Airsonic-Advanced, Gonic, …)
+│ Airsonic                   │
 └────────────────────────────┘
 ```
 
-Key principles:
+### Why a local catalog?
+The UI needs **cascading facets**: Folder → Genre → Artist → Album, each one multi-select. The Subsonic/Airsonic API cannot answer these questions directly:
+- `getGenres` cannot be limited to a music folder.
+- There is no endpoint for "artists within these genres" or "albums of these artists within these genres".
+- `getSongsByGenre` takes a single genre and pages slowly.
 
-1. **No generic pass-through proxy.** Exposing `/api/subsonic/[...method]` with server-side credentials would let any client call admin endpoints. Instead:
-   - JSON metadata calls (`getMusicFolders`, `getArtists`, `getAlbumList2`, …) are made **server-side** through a typed client and rendered by Server Components or returned by narrow route handlers.
-   - **Binary** endpoints (`stream`, `getCoverArt`, later `download`) go through dedicated, allow-listed streaming route handlers.
-2. **Range requests are forwarded** so the browser can seek in audio.
-3. **Runtime configuration.** No `NEXT_PUBLIC_*` value depends on the deployment, so one image works on any NAS.
+So the server **syncs the whole library metadata** from Airsonic into SQLite. The browser loads a compact snapshot once and computes facets and the table **in memory**. The cascade is then instant, works for any combination of filters, and the "remove from results" exclusions stay purely client-side.
+
+Rough size: 50 000 tracks come to about 6–8 MB of JSON, or about 1–1.5 MB gzipped. That is a one-time load on the LAN, and the browser can cache it (ETag + IndexedDB).
+
+### Principles
+1. **Credentials never leave the server.** Every Airsonic call is made server-side with token auth: `t = md5(password + salt)` with a fresh random salt for each request.
+2. **No generic pass-through proxy.** Only allow-listed operations are exposed: stream, cover, catalog, playlists and play queue.
+3. **Runtime configuration.** The same image works on any host, and invalid settings stop the app at startup with a clear message.
 
 ---
 
 ## 3. Tech stack
 
-- **Runtime:** Node.js 22 LTS (Alpine image)
-- **Framework:** Next.js (latest stable, App Router, TypeScript strict, `output: "standalone"`)
-- **UI:** MUI (`@mui/material`, `@mui/icons-material`) with `@mui/material-nextjs` (`AppRouterCacheProvider`), plus Roboto through `next/font`
-- **Session:** `iron-session` (encrypted, signed httpOnly cookie, no database)
-- **Validation:** `zod` for env parsing and Subsonic response shapes at the boundary
-- **Client data fetching (for pagination / infinite lists):** TanStack Query, calling the app's own route handlers
-- **Package manager:** pnpm
-- **Quality:** ESLint, Prettier, Vitest (+ MSW for mocking Subsonic), Playwright (smoke tests)
-- **CI:** GitHub Actions that run lint, typecheck and tests, then build a multi-arch image and push it to GHCR
-
----
-
-## 4. Subsonic integration
-
-### 4.1 Authentication to Subsonic
-- Use **token auth**: `u=<user>&t=md5(password+salt)&s=<salt>&v=1.16.1&c=music-ui&f=json`.
-- If the server advertises the OpenSubsonic `apiKeyAuthentication` extension, the client can also support `apiKey=` (optional, behind a capability check).
-- Never use plain `p=` or hex passwords.
-
-### 4.2 Typed client — `src/lib/subsonic/`
-```
-client.ts      // buildUrl(), request<T>(method, params), error mapping
-auth.ts        // salt/token generation
-types.ts       // MusicFolder, Artist, Album, Child (song), Directory, …
-endpoints.ts   // typed wrappers (below)
-errors.ts      // SubsonicError(code, message) + HTTP mapping
-```
-- Every response is wrapped in `subsonic-response`. Subsonic returns **HTTP 200 even on failure** (`status: "failed"`), so the client unwraps and throws `SubsonicError`:
-  - `40/41/44` → 401 (bad credentials / token), `50` → 403, `70` → 404, others → 502.
-- Timeouts through `AbortSignal.timeout()`, plus one retry on network error for idempotent GETs.
-- Server-only module (`import "server-only"`) so it can never be bundled client-side.
-
-### 4.3 Endpoints needed for the base app
-
-| Purpose | Endpoint | Notes |
+| Concern | Choice | Notes |
 |---|---|---|
-| Health / connectivity | `ping` | Used by `/api/health` and the login check |
-| Capabilities | `getOpenSubsonicExtensions` | Optional; detect Navidrome/OpenSubsonic features |
-| **Music folders** | `getMusicFolders` | Root of the whole app |
-| Artists (ID3) | `getArtists?musicFolderId=` | Indexed A–Z |
-| Artist detail | `getArtist?id=` | Albums of the artist |
-| Album list | `getAlbumList2?type=alphabeticalByName&size=&offset=&musicFolderId=` | Paginated |
-| Album detail | `getAlbum?id=` | Tracks |
-| File-tree browsing | `getIndexes?musicFolderId=` + `getMusicDirectory?id=` | "Folder" view, since folders matter for this app |
-| Cover art | `getCoverArt?id=&size=` | Proxied binary |
-| Stream | `stream?id=&maxBitRate=&format=` | Proxied binary with Range (needed only to validate the proxy in this phase) |
-
-> **ID3 vs file-tree:** both are planned. The ID3 view (`getArtists`/`getAlbum`) gives clean metadata. The file-tree view (`getIndexes`/`getMusicDirectory`) mirrors the on-disk folder structure. Because the app centers on music folders, the base app ships both, behind a simple view toggle.
-
-### 4.4 Multiple music folders
-- `musicFolderId` is an optional param on most list endpoints. The app models a **folder scope**:
-  - `all`: no `musicFolderId` param (aggregated)
-  - `<id>`: scoped to one folder
-- The scope lives in the **URL** (shareable, server-renderable): `/f/[folderId]/…`, where `folderId` = `all` or a numeric id.
-- The layout loads `getMusicFolders` once (cached) and renders a folder switcher in the app shell.
-- The last used folder is remembered in a cookie so `/` redirects to `/f/<last>/albums`.
-- Edge cases: a folder the user has no access to (Subsonic returns a reduced list, so validate the id against it → 404), a server with a single folder (hide the switcher), and a deleted folder (fall back to `all`).
+| Runtime | Node.js 26 LTS, `node:26-alpine` | |
+| Framework | Next.js latest stable, App Router, `output: "standalone"` | |
+| UI kit | `@mui/material`, `@mui/icons-material`, `@mui/material-nextjs` | Theme with light and dark color schemes |
+| Server DB | SQLite via built-in **`node:sqlite`** | Built into Node, so there is nothing native to compile on Alpine. `better-sqlite3` is the fallback if needed |
+| Client state | **Zustand** (catalog, filters, selection, player, playlists) | Small stores with selectors |
+| Track table | **TanStack Table + TanStack Virtual**, rendered with MUI `Table` components | Handles tens of thousands of rows, sorting, multi-select. Avoids MUI X Pro licensing |
+| Drag & drop | **dnd-kit** (`@dnd-kit/core`, `@dnd-kit/sortable`) | Reordering the sidebar, and dragging table rows onto the sidebar |
+| Validation | `zod` | Env vars, API inputs, Airsonic responses |
+| Tests | Vitest + MSW, Playwright | |
+| Tooling | pnpm, ESLint, Prettier, TypeScript strict | |
+| CI | GitHub Actions → GHCR (`linux/amd64`) | |
 
 ---
 
-## 5. Proxy / route handlers (`src/app/api/`)
+## 4. Airsonic integration (`src/lib/subsonic/`, server-only)
+
+- Requests use `u`, `t`, `s`, `v=1.15.0`, `c=music-ui` and `f=json`. Version 1.15.0 is understood by both Airsonic and Airsonic-Advanced.
+- Responses are unwrapped from `subsonic-response`. Because Airsonic returns **HTTP 200 on failure**, `status:"failed"` is turned into `SubsonicError(code)`: 40/41 → 401, 50 → 403, 70 → 404, anything else → 502.
+- Each request has a timeout (`AbortSignal.timeout`). A concurrency limiter (about 4 parallel calls) keeps the sync from overloading Airsonic.
+
+| Use | Endpoint |
+|---|---|
+| Health | `ping` |
+| Folders | `getMusicFolders` |
+| Catalog crawl | `getAlbumList2?type=alphabeticalByName&size=500&offset=&musicFolderId=` followed by `getAlbum?id=` |
+| Change detection | `getIndexes?ifModifiedSince=` (gives `lastModified`), `getScanStatus` |
+| Cover | `getCoverArt?id=&size=` |
+| Stream | `stream?id=&format=raw` (`raw` = no transcoding, so seeking with Range works) |
+| Playlists | `getPlaylists`, `getPlaylist`, `createPlaylist`, `updatePlaylist`, `deletePlaylist` |
+| Play queue | `getPlayQueue`, `savePlayQueue` |
+
+---
+
+## 5. Catalog sync (`src/lib/catalog/`)
+
+**SQLite schema (`/data/music-ui.db`):**
+```
+folders(id, name)
+albums (id, folderId, name, artist, artistId, year, genre, coverArt, songCount, created)
+tracks (id, folderId, albumId, title, artist, artistId, album, genre, year,
+        track, disc, duration, bitRate, suffix, size, coverArt, path)
+meta   (key, value)        -- lastSync, lastModified, catalogVersion
+app_state(key, json)       -- sidebar playlist order, misc UI prefs
+```
+
+**Sync algorithm:**
+1. `getMusicFolders` returns the list of folders.
+2. For each folder, page through `getAlbumList2(musicFolderId)` to get its albums. This gives a reliable album → folder mapping.
+3. **Incremental:** call `getAlbum` only for albums that are new or changed (different `songCount` or `created`). Rows for albums that disappeared are deleted.
+4. Rows are written in one transaction, then `catalogVersion` is increased.
+
+**Triggers:**
+- At startup if the DB is empty.
+- Periodically: every `SYNC_INTERVAL_MINUTES`, a cheap check (`getIndexes` `lastModified` + `getScanStatus`) starts a sync only when something changed.
+- A manual "Rescan" button in Settings.
+
+Only one sync runs at a time (in-process lock). Progress is available at `/api/catalog/status`.
+
+**Snapshot endpoint `/api/catalog`:**
+- Format is columnar and compact: `{version, folders[], genres[], artists[], albums[], tracks:{id[], title[], artistIdx[], albumIdx[], genreIdx[], folderIdx[], year[], track[], disc[], duration[], …}}`. Strings are stored once in dictionaries and tracks refer to them by index.
+- Responses are gzipped and carry `ETag: catalogVersion`. The client caches the snapshot in IndexedDB and revalidates with `If-None-Match`.
+
+---
+
+## 6. Server routes (`src/app/api/`)
 
 | Route | Method | Behavior |
 |---|---|---|
-| `/api/health` | GET | `200 {app:"ok", subsonic:"ok"\|"unreachable"}`, used by the Docker `HEALTHCHECK` (the app answers even if Subsonic is down, reporting it as degraded) |
-| `/api/auth/login` | POST | Validates credentials with `ping`, then creates the session |
-| `/api/auth/logout` | POST | Destroys the session |
-| `/api/cover/[id]` | GET | Proxies `getCoverArt`. `?size=` limited to a whitelist (64/150/300/600/1200). Sends `Cache-Control: private, max-age=31536000, immutable` |
-| `/api/stream/[id]` | GET | Proxies `stream`. Forwards the `Range` header, streams `upstream.body`, copies `Content-Type`, `Content-Length`, `Content-Range`, `Accept-Ranges`, keeps the status (`200`/`206`), and aborts upstream when the client disconnects (`request.signal`) |
-| `/api/folders/[folderId]/albums` | GET | JSON pagination for infinite scroll (`offset`, `size`, `type`) |
+| `/api/health` | GET | App status, Airsonic reachability and sync state. Used by the Docker `HEALTHCHECK` |
+| `/api/catalog` | GET | Snapshot (§5), returns 304 when unchanged |
+| `/api/catalog/status` | GET | `{syncing, progress, lastSync, trackCount}` |
+| `/api/catalog/rescan` | POST | Starts a sync |
+| `/api/stream/[id]` | GET | Proxies `stream`. Forwards `Range`, streams the body, copies `Content-Type/Length/Range` and `Accept-Ranges`, keeps 200/206, and aborts the upstream call when the client disconnects |
+| `/api/cover/[id]` | GET | Proxies `getCoverArt`, only for sizes 64/150/300/600, with `Cache-Control: max-age=31536000, immutable` |
+| `/api/playlists` | GET / POST | List playlists (merged with the stored order) / create one from `songIds[]` |
+| `/api/playlists/[id]` | GET / PATCH / DELETE | Tracks / rename, add, remove, reorder tracks / delete |
+| `/api/playlists/order` | PUT | Saves the sidebar order in `app_state` |
+| `/api/queue` | GET / PUT | Airsonic play queue ("currently playing") so it is restored after a reload |
 
-All handlers: `export const runtime = "nodejs"` and `dynamic = "force-dynamic"`. A session is required (otherwise 401). Ids are validated with zod (Subsonic ids are opaque strings, so length and charset are checked).
-
----
-
-## 6. Authentication of app users
-
-**Recommended: log in with the Subsonic account.**
-- The login page posts username and password. The server calls `ping` with token auth.
-- On success the session cookie stores `{ username, token, salt }` (token = md5(password+salt)). The password itself is **not** stored. The token+salt pair is reusable for Subsonic calls, and the cookie is encrypted with `SESSION_SECRET`.
-- This respects per-user folder permissions configured in Subsonic, which matters for a multi-folder app.
-- The route guard runs in `proxy.ts` (Next.js ≥16 name for `middleware.ts`). It redirects to `/login` when no session cookie exists. The full check happens server-side in the data layer.
-
-**Alternative (optional flag): single-user mode.** With `SUBSONIC_USER` + `SUBSONIC_PASSWORD` set in env and `AUTH_MODE=none`, the login page is skipped. This is handy for a home NAS that only you use on the LAN.
+All routes use the Node runtime and are dynamic. Ids are validated with zod.
 
 ---
 
-## 7. Routes / pages (base app)
+## 7. UI specification (Phase 2)
+
+Everything lives on a single page. Settings open in a dialog.
 
 ```
-/login                                 Login form
-/                                      → redirect to /f/<lastFolder|all>/albums
-/f/[folderId]/albums                   Album grid (paginated, ID3)
-/f/[folderId]/artists                  Artist index A–Z (ID3)
-/f/[folderId]/artists/[artistId]       Artist → albums
-/f/[folderId]/albums/[albumId]         Album → track list
-/f/[folderId]/browse                   File-tree root (getIndexes)
-/f/[folderId]/browse/[dirId]           Directory (getMusicDirectory)
-/settings                              Server info, connection status, logout
+┌──────────────────────────────────────────────────────────────────────────┐
+│ ⏮  ⏯  ⏹  ⏭   ▶ Title — Artist        0:42 ━━━━━━●──────────── 3:57   ⚙ │  ← player bar
+├───────────────┬──────────────────────────────────────────────────────────┤
+│ ▶ Currently   │ ┌ Folder ───┐┌ Genre ────┐┌ Artist ───┐┌ Album ────┐     │
+│   playing     │ │☐ Main     ││☐ Pop      ││☐ ABBA     ││☐ Pump     │     │  ← filters
+│ 🔎 Filter     │ │☑ Live     ││☑ Rock     ││☑ Aerosmith││☐ Toys…    │     │
+│   results     │ │…          ││…          ││…          ││…          │     │
+│ ──────────    │ └───────────┘└───────────┘└───────────┘└───────────┘     │
+│ ≡ Road trip   ├──────────────────────────────────────────────────────────┤
+│ ≡ Chill       │ #  Title          Artist     Album    Genre Year  Time  │  ← track table
+│ ≡ Workout     │ 1  Dream On       Aerosmith  Aeros…   Rock  1973  4:28  │
+│ (drop here →  │ 2  Walk This Way  Aerosmith  Toys…    Rock  1975  3:40  │
+│  new list)    │ …                                                        │
+└───────────────┴──────────────────────────────────────────────────────────┘
 ```
 
-Each segment gets `loading.tsx` (MUI Skeletons), `error.tsx` (it maps `SubsonicError` to a friendly message) and `not-found.tsx`.
+Layout uses CSS grid: the top bar has a fixed height, and below it the sidebar has a fixed width (resizable later). On the right, the filter panel takes a fixed height that can be resized with a splitter, and the table fills the remaining space with internal scrolling only.
 
-**App shell (minimal, refined later):** MUI `AppBar` with the folder switcher (`Select`), a responsive `Drawer` (Albums / Artists / Browse / Settings), and light/dark theme following the system (`CssVarsProvider` / `colorSchemes`). Lists are plain MUI `ImageList` / `List`. Virtualization and the player bar come with the UI phase.
+### 7.1 Player bar (top)
+- **Previous / Play-Pause / Stop / Next** (MUI `IconButton`s), a **seek slider** (MUI `Slider`) with elapsed/total time, and the current track (cover thumbnail, title, artist).
+- Engine: a single `HTMLAudioElement` held by `playerStore`, with `src=/api/stream/:id`. Seeking sets `currentTime`, which works through Range requests (§6).
+- Behavior:
+  - Stop pauses and goes back to 0:00.
+  - Previous restarts the current track if more than 3 s have played, otherwise it goes to the previous track.
+  - Next plays the next track in the queue.
+  - At the end of a track the next one starts automatically.
+- The next track is preloaded through a second hidden `<audio preload="auto">` for gapless-ish playback.
+- Media Session API: OS media keys and lock-screen controls.
+- Keyboard: Space toggles play/pause, Ctrl+← / Ctrl+→ go to previous / next.
+
+### 7.2 Sidebar (left)
+Items, from top to bottom:
+1. **Currently playing.** Always first and fixed. It is the play queue. Selecting it shows the queue in the table, with the current track highlighted.
+2. **Filter results.** Fixed. It is the virtual list produced by the current filters minus exclusions. Selecting it shows the filter panel and the filtered table.
+3. **Custom playlists.** Stored in Airsonic. They can be **reordered with drag & drop** (dnd-kit sortable), and the order is saved through `/api/playlists/order`. Each one offers rename and delete in a context menu.
+
+Drop targets for tracks dragged from the table:
+- The **empty area / "new playlist" zone** creates a new playlist. It is created immediately with an inline-editable default name ("New playlist").
+- An **existing playlist** (*proposed*): the tracks are appended.
+- **Currently playing** (*proposed*): the tracks are added to the queue.
+
+### 7.3 Filters (right, upper part)
+Four boxes in a row: **Music Folder → Genre → Artist → Album**.
+- Each box is a **multi-select list** (MUI `List` with checkboxes, virtualized for long lists). Each box has a small search field, a "clear" action and a count per item.
+- **Nothing selected = everything selected** for that level.
+- **Cascade (options):** each box only lists values present in the tracks that match all **previous** boxes.
+  - Genre options come from the tracks in the selected folders (or all folders).
+  - Artist options come from the tracks matching folder ∩ genre.
+  - Album options come from the tracks matching folder ∩ genre ∩ artist.
+- **Cascade (reset):** changing a selection in a box **clears the selection of every box after it**. For example, changing Genre from Rock to Pop clears Artist and Album.
+- Facets are computed in memory with memoized selectors over the catalog store. Track index arrays are filtered level by level, so each step only scans the previous step's result.
+
+### 7.4 Track table (right, lower part)
+- Rows = tracks matching **all four** filters minus the **exclusions**. For example, selecting Aerosmith as Artist lists every Aerosmith track until specific Albums are selected.
+- Columns: `#`, Title, Artist, Album, Genre, Year, Duration, Folder, Format/Bitrate. Columns are sortable (click a header) and their width can be changed. The default sort is Artist → Year → Album → Disc → Track.
+- Virtualized rows, so 50k+ tracks remain smooth.
+- **Selection:** click, Ctrl/Cmd-click (toggle), Shift-click (range), Ctrl+A (all).
+- **Delete** key or the context menu "Remove from results" adds the selected tracks to the **exclusion set** of "Filter results". The tracks are hidden only. Nothing is deleted from disk or Airsonic.
+  - Inside a custom playlist, Delete removes the tracks from that playlist through `updatePlaylist`.
+  - Inside Currently playing, Delete removes the tracks from the queue.
+- **Double-click** a track: the current table list (or the visible order) replaces "Currently playing" and playback starts at that track (*proposed*).
+- **Drag** the selected rows onto the sidebar (§7.2). A drag overlay shows "N tracks".
+
+### 7.5 Client state (Zustand stores)
+| Store | Contents | Persistence |
+|---|---|---|
+| `catalogStore` | Decoded snapshot, lookup maps | IndexedDB (snapshot + ETag) |
+| `filterStore` | `folders[]`, `genres[]`, `artists[]`, `albums[]`, `excluded: Set<trackId>` | localStorage |
+| `viewStore` | Active sidebar item, table sort, column widths, row selection | localStorage (not selection) |
+| `playerStore` | Queue (track ids), index, state, position, volume | Airsonic play queue + localStorage |
+| `playlistStore` | Playlists, order, cached tracks | Server (`/api/playlists`) |
 
 ---
 
@@ -163,28 +234,28 @@ Each segment gets `loading.tsx` (MUI Skeletons), `error.tsx` (it maps `SubsonicE
 music-ui/
 ├─ src/
 │  ├─ app/
-│  │  ├─ (auth)/login/page.tsx
-│  │  ├─ (app)/layout.tsx              # shell: AppBar, Drawer, folder switcher
-│  │  ├─ (app)/f/[folderId]/…          # pages from §7
-│  │  ├─ (app)/settings/page.tsx
-│  │  ├─ api/{health,auth,cover,stream,folders}/…
-│  │  ├─ layout.tsx                    # <AppRouterCacheProvider><ThemeProvider>
-│  │  └─ page.tsx                      # redirect
+│  │  ├─ layout.tsx                 # AppRouterCacheProvider + ThemeProvider
+│  │  ├─ page.tsx                   # the single-page shell
+│  │  └─ api/{health,catalog,stream,cover,playlists,queue}/…
 │  ├─ lib/
-│  │  ├─ subsonic/                     # §4.2 (server-only)
-│  │  ├─ session.ts                    # iron-session helpers
-│  │  ├─ env.ts                        # zod-validated env, fails fast at boot
-│  │  └─ folders.ts                    # folder-scope helpers (all | id)
-│  ├─ components/                      # FolderSwitcher, AlbumCard, CoverArt, …
-│  ├─ theme/                           # MUI theme
-│  └─ proxy.ts                         # route guard
-├─ tests/ (unit + e2e)
-├─ docker/
-│  └─ compose.dev.yml                  # Navidrome + sample music for local dev
+│  │  ├─ env.ts                     # zod-validated runtime env
+│  │  ├─ subsonic/                  # Airsonic client (server-only)
+│  │  ├─ catalog/                   # sync job, SQLite repo, snapshot encoder
+│  │  └─ db.ts                      # node:sqlite connection + migrations
+│  ├─ client/
+│  │  ├─ stores/                    # zustand stores (§7.5)
+│  │  ├─ catalog/                   # snapshot decode + facet selectors
+│  │  └─ player/                    # audio engine, media session
+│  ├─ components/
+│  │  ├─ PlayerBar/  Sidebar/  Filters/  TrackTable/  SettingsDialog/
+│  └─ theme/
+├─ tests/{unit,integration,e2e}/
+├─ docker/compose.dev.yml           # Airsonic + sample music (2 folders) for dev/e2e
+├─ unraid/music-ui.xml              # Unraid Docker template
 ├─ Dockerfile
-├─ compose.yml                         # example for the NAS
+├─ compose.yml
 ├─ .env.example
-└─ next.config.ts                      # output: "standalone"
+└─ next.config.ts                   # output: "standalone"
 ```
 
 ---
@@ -193,88 +264,100 @@ music-ui/
 
 | Variable | Required | Example | Description |
 |---|---|---|---|
-| `SUBSONIC_URL` | ✅ | `http://192.168.1.20:4533` or `http://navidrome:4533` | Internal URL, reachable from the container only |
-| `SESSION_SECRET` | ✅ | 32+ random chars | Cookie encryption |
-| `AUTH_MODE` | | `subsonic` (default) \| `none` | §6 |
-| `SUBSONIC_USER` / `SUBSONIC_PASSWORD` | if `AUTH_MODE=none` | | Single-user mode |
-| `SUBSONIC_CLIENT_NAME` | | `music-ui` | `c=` param |
-| `COOKIE_SECURE` | | `false` | Set to `true` behind HTTPS reverse proxy. On a plain-HTTP LAN it must be `false`, otherwise the cookie is dropped |
+| `SUBSONIC_URL` | ✅ | `http://192.168.1.10:4040` | Airsonic URL as seen from the container |
+| `SUBSONIC_USER` | ✅ | `music` | Shared account |
+| `SUBSONIC_PASSWORD` | ✅ | | Shared account password, used only to compute tokens |
+| `SYNC_INTERVAL_MINUTES` | | `15` | Change-check interval, `0` = manual only |
+| `DATA_DIR` | | `/data` | SQLite location (mount it as a volume) |
 | `PORT` | | `3000` | |
 | `LOG_LEVEL` | | `info` | |
 
-`src/lib/env.ts` validates these at startup, so a misconfigured container exits immediately with a clear message.
-
 ---
 
-## 10. Docker & NAS deployment
+## 10. Docker & Unraid
 
 **Dockerfile (multi-stage):**
-1. `deps`: `node:22-alpine`, `corepack enable`, `pnpm install --frozen-lockfile`
-2. `build`: `pnpm build` (standalone output, telemetry disabled)
-3. `runner`: `node:22-alpine`. It copies `.next/standalone`, `.next/static` and `public`, runs as a non-root `node` user, uses `EXPOSE 3000` and `CMD ["node","server.js"]`, and sets `HEALTHCHECK` to `wget -qO- http://127.0.0.1:3000/api/health`.
+1. `deps`: `node:26-alpine`, `corepack enable`, `pnpm install --frozen-lockfile`
+2. `build`: `pnpm build` (standalone output)
+3. `runner`: `node:26-alpine`, a non-root user, copies `.next/standalone`, `.next/static` and `public`. It declares `VOLUME /data`, `EXPOSE 3000`, a `HEALTHCHECK` on `/api/health` and runs `CMD ["node","server.js"]`.
 
-Target image size: about 150 MB. Built with `docker buildx` for `linux/amd64,linux/arm64` (Synology/QNAP/ARM NAS).
+The image is built for `linux/amd64` only and published to `ghcr.io/leomaradan/music-ui`.
 
-**compose.yml (NAS example):**
+**Unraid:**
+- Ship `unraid/music-ui.xml`, a Docker template with:
+  - port `3000`
+  - `/data` → `/mnt/user/appdata/music-ui`
+  - env vars from §9, with the password as a masked field
+  - icon and WebUI link
+- Networking:
+  - If Airsonic runs as an Unraid container, put both on the same **custom Docker network** and use `http://airsonic:4040`.
+  - Otherwise use the Unraid host LAN IP and Airsonic's mapped port.
+  - Airsonic's port does not need to be published to the LAN at all when a custom network is used.
+- `PUID/PGID`: the `/data` appdata folder must be writable by the container user (document `chown 99:100` (nobody:users), or run as `99:100`).
+
+**compose.yml** (for non-template use):
 ```yaml
 services:
   music-ui:
     image: ghcr.io/leomaradan/music-ui:latest
     restart: unless-stopped
     ports: ["3000:3000"]
+    volumes: ["/mnt/user/appdata/music-ui:/data"]
     environment:
-      SUBSONIC_URL: http://navidrome:4533   # or the LAN IP of the Subsonic server
-      SESSION_SECRET: ${SESSION_SECRET}
-      COOKIE_SECURE: "false"
+      SUBSONIC_URL: http://airsonic:4040
+      SUBSONIC_USER: music
+      SUBSONIC_PASSWORD: ${SUBSONIC_PASSWORD}
     networks: [music]
 networks:
   music:
-    external: true   # shared with the Subsonic container if it runs on the same NAS
+    external: true
 ```
 
-Networking notes:
-- **Subsonic in Docker on the same NAS:** join the same Docker network and use the service name. Nothing needs to be exposed.
-- **Subsonic on the host or another machine:** use its LAN IP (`host.docker.internal` is not reliable on NAS Docker. Use the IP or `network_mode: host`).
-- Remote access, if wanted later, goes through the NAS reverse proxy or a VPN to this app only. Subsonic stays private.
+---
+
+## 11. Testing
+
+- **Unit:** token/salt generation, Airsonic error mapping, snapshot encode/decode round-trip, **facet cascade** (options per level, reset of descendant boxes, empty = all), exclusions, table multi-select logic, player prev/next rules.
+- **Integration (MSW):** sync (incremental: new, changed and removed albums), stream proxy (Range → 206, client abort), playlist routes.
+- **E2E (Playwright)** against `docker/compose.dev.yml` (Airsonic + CC-licensed sample tracks in **two** music folders). The tests:
+  - wait for the initial sync
+  - filter Folder → Genre → Artist and check the cascade and resets
+  - remove tracks from the results
+  - drag the selection onto the sidebar, which creates a playlist
+  - reorder playlists
+  - play a track, seek, then use next and stop
 
 ---
 
-## 11. Caching & performance (base level)
+## 12. Milestones
 
-- `getMusicFolders`, `getArtists`, `getIndexes`: server-side cache via `unstable_cache` / `"use cache"`. The key includes **username + folderId** (permissions differ per user). TTL is 5 min, and a manual "refresh" in settings revalidates the tag.
-- Album/artist detail: short TTL (60 s).
-- Cover art: immutable browser cache. A server-side disk cache is not needed in phase 1.
-- Stream: never cached. Pure pass-through.
-
----
-
-## 12. Testing & quality
-
-- **Unit (Vitest):** token generation, URL building, error mapping, response unwrapping, folder-scope parsing, Range header forwarding logic.
-- **Integration (Vitest + MSW):** route handlers against a mocked Subsonic (including `status:"failed"` responses and 206 partial content).
-- **E2E smoke (Playwright):** run against `docker/compose.dev.yml` (Navidrome with a few CC-licensed tracks in **two music folders**). The tests log in, switch folders, list albums, open an album, fetch a cover, and request a stream with `Range: bytes=0-1023` (expect 206).
-- **CI:** lint, typecheck, unit tests, build, Docker build. The image is pushed to GHCR on `main` and on tags.
-
----
-
-## 13. Milestones
-
+### Phase 1 — Base
 | # | Milestone | Done when |
 |---|---|---|
-| M0 | Scaffold: Next.js + TS + MUI + ESLint/Prettier + Vitest | `pnpm dev` shows a themed MUI page |
-| M1 | `env.ts` + Subsonic client + unit tests | `ping`/`getMusicFolders` work against dev Navidrome |
-| M2 | Session + login/logout + route guard (+ `AUTH_MODE=none`) | Unauthenticated users are redirected; bad credentials show an error |
-| M3 | Binary proxy: `/api/cover`, `/api/stream`, `/api/health` | Covers render; stream answers 206 to Range requests; health is OK |
-| M4 | Folder scope + app shell + folder switcher | Switching folders changes the URL and the data |
-| M5 | Listing pages (albums, artists, artist, album, browse) | All §7 pages render real data in both `all` and single-folder scope |
-| M6 | Dockerfile + compose + multi-arch CI build | Container runs on the NAS and reaches Subsonic over the LAN |
+| M0 | Scaffold: Next.js + TS + MUI + ESLint/Prettier + Vitest, Node 26 | `pnpm dev` shows the themed empty shell |
+| M1 | `env.ts` + Airsonic client + tests | `ping` and `getMusicFolders` work against the dev Airsonic |
+| M2 | SQLite + catalog sync + `/api/catalog(/status,/rescan)` | Both dev folders are fully indexed, and a second sync is incremental |
+| M3 | `/api/stream`, `/api/cover`, `/api/health` | 206 on Range, covers cached, health OK |
+| M4 | Docker image + Unraid template + CI (amd64 → GHCR) | The container runs on Unraid, reaches Airsonic and syncs |
+
+### Phase 2 — UI
+| # | Milestone | Done when |
+|---|---|---|
+| M5 | Layout shell (player bar, sidebar, filters, table zones) + catalog store | The snapshot loads and is cached in IndexedDB |
+| M6 | Cascading filters (4 multi-select boxes) | Cascade and reset rules from §7.3 pass the tests |
+| M7 | Virtualized track table: sort, multi-select, remove from results | Smooth with 50k rows, exclusions work |
+| M8 | Player bar + audio engine + Currently playing queue (+ Airsonic play queue) | Play, pause, stop, previous, next and seek work, and the queue survives a reload |
+| M9 | Playlists: sidebar list, DnD reorder, drag tracks → new playlist, rename/delete | The order persists, and playlists also show up in Airsonic |
+| M10 | Polish: keyboard shortcuts, Media Session, settings dialog (rescan, status), dark mode | |
 
 ---
 
-## 14. Open questions (to confirm before / during M1)
+## 13. Open questions
 
-1. **Which Subsonic server?** (Navidrome, Airsonic-Advanced, Gonic, original Subsonic…). This decides OpenSubsonic features and whether `musicFolderId` is honored on every endpoint (Navidrome historically had partial support for it on some endpoints).
-2. **Auth model:** per-user Subsonic login (recommended), or single-user env credentials?
-3. **Access:** LAN only over HTTP, or also through a reverse proxy with HTTPS (affects `COOKIE_SECURE`, base path)?
-4. **Folder semantics:** is "all folders" a useful view, or should the app always be scoped to exactly one folder?
-5. **NAS model / CPU arch**, to confirm that arm64 builds are needed.
+1. **Airsonic flavor:** original Airsonic or **Airsonic-Advanced**? Both work with API 1.15. Advanced is faster for the crawl and fixes some JSON quirks.
+2. **Artist filter field:** filter on the **track artist** (proposed) or the **album artist**? This matters for compilations and "feat." tracks.
+3. **Exclusions lifetime:** should tracks removed from "Filter results" stay hidden (a) until a manual "reset", (b) until any filter changes, or (c) permanently, like a hide list? The proposal is (b): they are cleared when a filter changes.
+4. **Dropping onto an existing playlist / Currently playing:** append (proposed), or only "create new playlist"?
+5. **Double-click behavior:** replace the queue with the current table list and start at the track (proposed), or just append the track?
+6. **Selecting a custom playlist in the sidebar:** the table then shows that playlist. Should the filter boxes be hidden, or should they filter inside the playlist?
+7. **Library size** (approx. number of tracks)? This confirms the in-browser catalog approach. It is comfortable up to about 150k tracks.
