@@ -37,7 +37,7 @@ describe('AppShell', () => {
 
   it('renders the track table header', () => {
     renderShell();
-    const table = screen.getByRole('table', { name: 'Tracks' });
+    const table = screen.getByRole('grid', { name: 'Tracks' });
     expect(within(table).getByRole('columnheader', { name: 'Title' })).toBeInTheDocument();
   });
 });

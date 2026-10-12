@@ -28,11 +28,13 @@
     "import/no-unassigned-import": [
       "warn",
       {
-        "allow": ["server-only", "@testing-library/jest-dom/vitest"]
+        "allow": ["server-only", "@testing-library/jest-dom/vitest", "fake-indexeddb/auto"]
       }
     ],
     "eslint/no-await-in-loop": "off",
-    "jsx-a11y/alt-text": "error"
+    "jsx-a11y/alt-text": "error",
+    "jsx-a11y/prefer-tag-over-role": "off",
+    "react/incompatible-library": "off"
   },
   "overrides": [
     {

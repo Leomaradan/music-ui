@@ -23,6 +23,14 @@ At startup, and then every `SYNC_INTERVAL_MINUTES`, the server copies the librar
 - `POST /api/catalog/rescan`: force a full sync
 - `GET /api/catalog`: the catalog snapshot loaded by the browser (gzip + ETag)
 
+### Using the library view
+
+- **Filters:** four boxes, Music Folder → Genre → Artist (album artist) → Album. Several values can be ticked in a box; nothing ticked means everything. Changing a box clears the boxes after it, and brings back tracks removed from the results.
+- **Table:** click a header to sort (ascending, descending, off), drag a header's right edge to resize (double-click resets).
+- **Selection:** click, Ctrl/Cmd-click, Shift-click, Ctrl/Cmd+A, arrow keys (Shift extends), Escape.
+- **Remove from results:** Delete / Backspace, or right-click → _Remove from results_. Hidden only; _Restore_ in the status bar brings them back.
+- Filters, removed tracks, sort and column widths are remembered in the browser. The catalog is cached in IndexedDB and revalidated every minute and when the tab becomes visible.
+
 ### Dev Navidrome
 
 A Navidrome with two libraries ("Main" and "Live") and generated sample tracks, for development and integration tests. Requires `ffmpeg` and Docker.
@@ -52,3 +60,6 @@ pnpm test:integration                             # runs against http://localhos
 - [x] M1 — Runtime config validation, typed Navidrome (Subsonic) client, dev Navidrome with two libraries
 - [x] M2 — SQLite catalog (node:sqlite), sync from Navidrome, `/api/catalog`, `/api/catalog/status`, `/api/catalog/rescan`
 - [ ] M3 — Stream, cover and health routes
+- [x] M5 — Catalog loaded in the browser (IndexedDB cache, ETag revalidation)
+- [x] M6 — Cascading multi-select filters (Folder → Genre → Artist → Album)
+- [x] M7 — Virtualized track table: sort, resize, multi-select, remove from results

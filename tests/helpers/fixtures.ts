@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 
 /** Real Navidrome 0.64 responses captured with scripts/generate-sample-music.sh data. */
 export function navidromeFixture(name: string): unknown {
-  const path = fileURLToPath(new URL(`../fixtures/navidrome/${name}.json`, import.meta.url));
+  // Relative to the project root: import.meta.url is not a file URL under jsdom.
+  const path = join(process.cwd(), 'tests/fixtures/navidrome', `${name}.json`);
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 

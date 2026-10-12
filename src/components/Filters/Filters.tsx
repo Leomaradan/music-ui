@@ -1,40 +1,43 @@
+'use client';
+
 import Box from '@mui/material/Box';
-import Paper from '@mui/material/Paper';
-import Typography from '@mui/material/Typography';
+import type { FilterLevel } from '@/client/catalog/facets';
+import { useFacets } from '@/client/hooks';
+import { useFilterStore } from '@/client/stores/filterStore';
+import FilterBox from './FilterBox';
 
 /** Cascade order of the filter boxes (PLAN.md §7.3). */
-export const FILTER_BOXES = ['Music Folder', 'Genre', 'Artist', 'Album'] as const;
+export const FILTER_BOXES: readonly { level: FilterLevel; title: string }[] = [
+  { level: 'folders', title: 'Music Folder' },
+  { level: 'genres', title: 'Genre' },
+  { level: 'artists', title: 'Artist' },
+  { level: 'albums', title: 'Album' },
+];
 
-/** Static filter boxes. The cascading multi-select logic arrives in M6. */
+/** The four cascading multi-select filter boxes. Always visible. */
 export default function Filters() {
+  const facets = useFacets();
+  const filters = useFilterStore((state) => state.filters);
+
   return (
     <Box
       sx={{
         display: 'grid',
-        gridTemplateColumns: `repeat(${FILTER_BOXES.length}, 1fr)`,
+        gridTemplateColumns: `repeat(${FILTER_BOXES.length}, minmax(0, 1fr))`,
         gap: 1,
         p: 1,
         minHeight: 0,
       }}
     >
-      {FILTER_BOXES.map((label) => (
-        <Paper
-          key={label}
-          variant="outlined"
-          component="section"
-          aria-label={label}
-          sx={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}
-        >
-          <Typography
-            variant="subtitle2"
-            sx={{ px: 1.5, py: 1, borderBottom: 1, borderColor: 'divider' }}
-          >
-            {label}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ px: 1.5, py: 1 }}>
-            All
-          </Typography>
-        </Paper>
+      {FILTER_BOXES.map(({ level, title }) => (
+        <FilterBox
+          key={level}
+          level={level}
+          title={title}
+          options={facets?.[level] ?? []}
+          selected={filters[level]}
+          total={facets?.totals[level] ?? 0}
+        />
       ))}
     </Box>
   );

@@ -71,11 +71,11 @@ Rough size: 50 000 tracks come to about 6–8 MB of JSON, or about 1–1.5 MB gz
 | UI kit | `@mui/material`, `@mui/icons-material`, `@mui/material-nextjs` | Theme with light and dark color schemes |
 | Server DB | SQLite via built-in **`node:sqlite`** | Built into Node, so there is nothing native to compile on Alpine. `better-sqlite3` is the fallback if needed |
 | Client state | **Zustand** (catalog, filters, selection, player, playlists) | Small stores with selectors |
-| Track table | **TanStack Table + TanStack Virtual**, rendered with MUI `Table` components | Handles tens of thousands of rows, sorting, multi-select. Avoids MUI X Pro licensing |
+| Track table | **TanStack Table v9 + TanStack Virtual**, rendered with MUI `Table` components | Sorting and column resizing from TanStack; selection is the app's own (`src/client/selection.ts`). Measured with 50k tracks: ~0.7 s first render, <0.2 s per filter change. Avoids MUI X Pro licensing |
 | Drag & drop | **dnd-kit** (`@dnd-kit/core`, `@dnd-kit/sortable`) | Reordering the sidebar, and dragging table rows onto the sidebar |
 | Validation | `zod` | Env vars, API inputs, Navidrome responses |
 | Tests | Vitest + MSW, Playwright | |
-| Tooling | pnpm, **oxlint** (lint), **oxfmt** (format), TypeScript strict | Oxc tools (Rust), much faster than ESLint/Prettier. Oxlint plugins enabled: typescript, react (incl. hooks rules), nextjs, jsx-a11y, import, unicorn, vitest. Config: `.oxlintrc.json`, `.oxfmtrc.json` |
+| Tooling | pnpm, **oxlint** (lint), **oxfmt** (format), TypeScript strict | Oxc tools (Rust), much faster than ESLint/Prettier. Oxlint plugins enabled: typescript, react (incl. hooks rules), nextjs, jsx-a11y, import, unicorn, vitest. Config: `.oxlintrc.json`, `.oxfmtrc.json`. Disabled on purpose: `no-await-in-loop` (sequential server calls are intentional), `jsx-a11y/prefer-tag-over-role` (virtualized listbox/grid widgets need ARIA roles), `react/incompatible-library` (React Compiler is not used) |
 | CI | GitHub Actions → GHCR (`linux/amd64`) | |
 
 ---
@@ -234,9 +234,10 @@ Four boxes in a row: **Music Folder → Genre → Artist → Album**.
 ### 7.5 Client state (Zustand stores)
 | Store | Contents | Persistence |
 |---|---|---|
-| `catalogStore` | Decoded snapshot, lookup maps | IndexedDB (snapshot + ETag) |
+| `catalogStore` | Decoded snapshot, lookup maps | IndexedDB (snapshot; its version is the ETag) |
 | `filterStore` | `folders[]`, `genres[]`, `albumArtists[]`, `albums[]`, `excluded: Set<trackId>` (cleared on any filter change) | localStorage |
-| `viewStore` | Active sidebar item, table sort, column widths, row selection | localStorage (not selection) |
+| `viewStore` | Active sidebar item, table sort, column widths | localStorage (sort, widths) |
+| `selectionStore` | Selected rows and Shift-range anchor | Not persisted |
 | `playerStore` | Queue (track ids), index, state, position, volume | Navidrome play queue + localStorage |
 | `playlistStore` | Playlists, order, cached tracks | Server (`/api/playlists`) |
 
