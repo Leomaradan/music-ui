@@ -30,17 +30,18 @@ pnpm test:integration                             # runs against http://localhos
 
 `.env.local` for this setup: `SUBSONIC_URL=http://localhost:4533`, `SUBSONIC_USER=music`, `SUBSONIC_PASSWORD=music`.
 
-| Script                              | Purpose                                             |
-| ----------------------------------- | --------------------------------------------------- |
-| `pnpm dev`                          | Dev server                                          |
-| `pnpm build` / `pnpm start`         | Production build (standalone output) / serve it     |
-| `pnpm lint`                         | ESLint (Next.js core-web-vitals + TypeScript rules) |
-| `pnpm typecheck`                    | `tsc --noEmit`                                      |
-| `pnpm format` / `pnpm format:check` | Prettier                                            |
-| `pnpm test`                         | Vitest (jsdom + Testing Library)                    |
+| Script                              | Purpose                                                              |
+| ----------------------------------- | -------------------------------------------------------------------- |
+| `pnpm dev`                          | Dev server                                                           |
+| `pnpm build` / `pnpm start`         | Production build (standalone output) / serve it                      |
+| `pnpm lint`                         | oxlint (TypeScript, React hooks, Next.js, a11y rules; warnings fail) |
+| `pnpm typecheck`                    | `tsc --noEmit`                                                       |
+| `pnpm format` / `pnpm format:check` | oxfmt                                                                |
+| `pnpm test`                         | Vitest unit tests (integration tests are skipped without a server)   |
+| `pnpm test:integration`             | Integration tests against the dev Navidrome                          |
 
 ## Status
 
-- [x] M0 — Scaffold: Next.js, TypeScript, MUI theme (light/dark), static app shell, ESLint/Prettier, Vitest
+- [x] M0 — Scaffold: Next.js, TypeScript, MUI theme (light/dark), static app shell, oxlint/oxfmt, Vitest
 - [x] M1 — Runtime config validation, typed Navidrome (Subsonic) client, dev Navidrome with two libraries
 - [ ] M2 — SQLite catalog sync

@@ -24,7 +24,7 @@ async function json(method, path, { token, body } = {}) {
       'content-type': 'application/json',
       ...(token ? { 'x-nd-authorization': `Bearer ${token}` } : {}),
     },
-    body: body ? JSON.stringify(body) : undefined,
+    ...(body ? { body: JSON.stringify(body) } : {}),
   });
   const text = await response.text();
   const data = text ? JSON.parse(text) : undefined;

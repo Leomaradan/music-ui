@@ -9,14 +9,15 @@ import { SubsonicError } from '@/lib/subsonic/errors';
 
 const url = process.env.SUBSONIC_TEST_URL ?? '';
 
+// The describe body runs even when skipped, so clients are built lazily.
+const makeClient = (password = process.env.SUBSONIC_TEST_PASSWORD ?? 'music') =>
+  new SubsonicClient({
+    baseUrl: url,
+    username: process.env.SUBSONIC_TEST_USER ?? 'music',
+    password,
+  });
+
 describe.skipIf(!url)('Navidrome integration', () => {
-  // The describe body runs even when skipped, so build clients lazily.
-  const makeClient = (password = process.env.SUBSONIC_TEST_PASSWORD ?? 'music') =>
-    new SubsonicClient({
-      baseUrl: url,
-      username: process.env.SUBSONIC_TEST_USER ?? 'music',
-      password,
-    });
   let client: SubsonicClient;
   beforeAll(() => {
     client = makeClient();
@@ -28,7 +29,7 @@ describe.skipIf(!url)('Navidrome integration', () => {
 
   it('lists both libraries as music folders', async () => {
     const folders = await getMusicFolders(client);
-    expect(folders.map((folder) => folder.name).sort()).toEqual(['Live', 'Main']);
+    expect(folders.map((folder) => folder.name).toSorted()).toEqual(['Live', 'Main']);
   });
 
   it('search3 with an empty query is scoped by musicFolderId', async () => {

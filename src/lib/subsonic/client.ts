@@ -7,7 +7,12 @@ import { envelopeSchema, type SubsonicEnvelope } from './schemas';
 export const SUBSONIC_API_VERSION = '1.16.1';
 
 export type ParamValue =
-  string | number | boolean | null | undefined | readonly (string | number)[];
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | readonly (string | number)[];
 export type Params = Record<string, ParamValue>;
 
 export interface SubsonicClientOptions {

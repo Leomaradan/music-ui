@@ -75,7 +75,7 @@ Rough size: 50 000 tracks come to about 6–8 MB of JSON, or about 1–1.5 MB gz
 | Drag & drop | **dnd-kit** (`@dnd-kit/core`, `@dnd-kit/sortable`) | Reordering the sidebar, and dragging table rows onto the sidebar |
 | Validation | `zod` | Env vars, API inputs, Navidrome responses |
 | Tests | Vitest + MSW, Playwright | |
-| Tooling | pnpm, ESLint, Prettier, TypeScript strict | |
+| Tooling | pnpm, **oxlint** (lint), **oxfmt** (format), TypeScript strict | Oxc tools (Rust), much faster than ESLint/Prettier. Oxlint plugins enabled: typescript, react (incl. hooks rules), nextjs, jsx-a11y, import, unicorn, vitest. Config: `.oxlintrc.json`, `.oxfmtrc.json` |
 | CI | GitHub Actions → GHCR (`linux/amd64`) | |
 
 ---
@@ -354,7 +354,7 @@ networks:
 ### Phase 1 — Base
 | # | Milestone | Done when |
 |---|---|---|
-| M0 | Scaffold: Next.js + TS + MUI + ESLint/Prettier + Vitest, Node 26 | `pnpm dev` shows the themed empty shell |
+| M0 | Scaffold: Next.js + TS + MUI + oxlint/oxfmt + Vitest, Node 26 | `pnpm dev` shows the themed empty shell |
 | M1 | `env.ts` + Navidrome client + tests | `ping`, `getMusicFolders` (2 libraries) and `search3` with `musicFolderId` work against the dev Navidrome |
 | M2 | SQLite + catalog sync + `/api/catalog(/status,/rescan)` | Both dev folders are fully indexed, and a second sync is incremental |
 | M3 | `/api/stream`, `/api/cover`, `/api/health` | 206 on Range, covers cached, health OK |

@@ -1,0 +1,46 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "eslint",
+    "typescript",
+    "unicorn",
+    "oxc",
+    "react",
+    "nextjs",
+    "jsx-a11y",
+    "import",
+    "vitest"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "env": {
+    "browser": true,
+    "node": true,
+    "es2024": true
+  },
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "import/no-unassigned-import": [
+      "warn",
+      {
+        "allow": ["server-only", "@testing-library/jest-dom/vitest"]
+      }
+    ],
+    "eslint/no-await-in-loop": "off",
+    "jsx-a11y/alt-text": "error"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx", "tests/**"],
+      "env": {
+        "vitest": true
+      }
+    }
+  ],
+  "ignorePatterns": [".next/**", "out/**", "coverage/**", "next-env.d.ts", "docker/music/**"]
+}
