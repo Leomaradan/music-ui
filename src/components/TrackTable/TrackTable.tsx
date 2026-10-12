@@ -23,12 +23,15 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Typography from '@mui/material/Typography';
+import PlayIcon from '@mui/icons-material/PlayArrow';
 import RemoveIcon from '@mui/icons-material/PlaylistRemove';
+import NowPlayingIcon from '@mui/icons-material/VolumeUp';
 import type { Track } from '@/client/catalog/decode';
 import { useTableTracks } from '@/client/hooks';
 import { clickSelection, moveSelection } from '@/client/selection';
 import { useCatalogStore } from '@/client/stores/catalogStore';
 import { useFilterStore } from '@/client/stores/filterStore';
+import { selectCurrentTrackId, usePlayerStore } from '@/client/stores/playerStore';
 import { useSelectionStore } from '@/client/stores/selectionStore';
 import { useViewStore, type SortEntry } from '@/client/stores/viewStore';
 import { columns, features } from './columns';
@@ -39,10 +42,15 @@ type Updater<T> = T | ((previous: T) => T);
 const resolve = <T,>(updater: Updater<T>, previous: T): T =>
   typeof updater === 'function' ? (updater as (previous: T) => T)(previous) : updater;
 
+/** Row ids in the queue view are queue positions (a track can be queued twice). */
+const queueRowId = (index: number) => `q${index}`;
+const queueIndexOf = (rowId: string) => Number(rowId.slice(1));
+const NO_SORTING: SortEntry[] = [];
+
 /**
  * Virtualized track table (PLAN.md §7.4): sortable and resizable columns, multi-select
- * (click, Ctrl/Cmd, Shift, Ctrl+A, arrows), Delete / context menu to remove tracks from
- * the filter results.
+ * (click, Ctrl/Cmd, Shift, Ctrl+A, arrows), Delete / context menu to remove tracks (from the
+ * filter results, or from the queue), double-click / Enter to play.
  */
 export default function TrackTable() {
   const data = useTableTracks();
@@ -52,15 +60,26 @@ export default function TrackTable() {
   const selection = useSelectionStore((state) => state.selection);
   const setSelection = useSelectionStore((state) => state.setSelection);
   const exclude = useFilterStore((state) => state.exclude);
+  const currentTrackId = usePlayerStore(selectCurrentTrackId);
+  const currentIndex = usePlayerStore((state) => state.index);
+  const playbackStatus = usePlayerStore((state) => state.status);
   const [menu, setMenu] = useState<{ top: number; left: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isQueue = view === 'queue';
+
+  const getRowId = useCallback(
+    (track: Track, index: number) => (isQueue ? queueRowId(index) : track.id),
+    [isQueue],
+  );
 
   const table = useTable({
     features,
     columns,
     data,
-    getRowId: (track) => track.id,
-    state: { sorting, columnSizing },
+    getRowId,
+    // The queue keeps its play order: no sorting there.
+    state: { sorting: isQueue ? NO_SORTING : sorting, columnSizing },
+    enableSorting: !isQueue,
     onSortingChange: (updater) => {
       const { sorting: previous, setSorting } = useViewStore.getState();
       setSorting(resolve(updater as Updater<SortEntry[]>, previous));
@@ -88,16 +107,45 @@ export default function TrackTable() {
     overscan: 15,
   });
 
-  const canRemove = view === 'filter' && selection.ids.size > 0;
+  const currentRowId = isQueue
+    ? currentIndex >= 0
+      ? queueRowId(currentIndex)
+      : null
+    : currentTrackId;
+  const isPlaying = playbackStatus === 'playing' || playbackStatus === 'loading';
+
+  const canRemove = selection.ids.size > 0;
   const removeSelected = () => {
-    if (canRemove) exclude(selection.ids);
     setMenu(null);
+    if (!canRemove) return;
+    if (isQueue) {
+      usePlayerStore.getState().removeFromQueue([...selection.ids].map(queueIndexOf));
+      setSelection({ ids: new Set(), anchor: null });
+    } else {
+      exclude(selection.ids);
+    }
   };
 
   // Row handlers read the latest state through a ref so they stay stable and memoized
   // rows only re-render when their own props change (smooth scrolling on large lists).
-  const latest = useRef({ selection, order });
-  latest.current = { selection, order };
+  const latest = useRef({ selection, order, isQueue });
+  latest.current = { selection, order, isQueue };
+
+  /** Plays a row: in the queue, jumps to it; elsewhere, the listed rows become the queue. */
+  const playRow = useCallback((id: string) => {
+    const player = usePlayerStore.getState();
+    if (latest.current.isQueue) {
+      player.playIndex(queueIndexOf(id));
+    } else {
+      const rowOrder = latest.current.order;
+      player.playQueue(rowOrder, rowOrder.indexOf(id));
+    }
+  }, []);
+  const playSelected = () => {
+    setMenu(null);
+    const first = order.find((id) => selection.ids.has(id));
+    if (first) playRow(first);
+  };
 
   const onRowClick = useCallback(
     (event: MouseEvent, id: string) => {
@@ -129,6 +177,9 @@ export default function TrackTable() {
     } else if (event.key === 'Delete' || event.key === 'Backspace') {
       event.preventDefault();
       removeSelected();
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      playSelected();
     } else if (event.key === 'Escape') {
       setSelection({ ids: new Set(), anchor: null });
     } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -235,8 +286,10 @@ export default function TrackTable() {
                 index={item.index}
                 start={item.start}
                 selected={selection.ids.has(row.id)}
+                current={row.id === currentRowId ? (isPlaying ? 'playing' : 'paused') : null}
                 sizes={columnSizesKey}
                 onClick={onRowClick}
+                onDoubleClick={playRow}
                 onContextMenu={onRowContextMenu}
               />
             );
@@ -250,11 +303,18 @@ export default function TrackTable() {
         anchorReference="anchorPosition"
         anchorPosition={menu ?? undefined}
       >
+        <MenuItem onClick={playSelected} disabled={!canRemove}>
+          <ListItemIcon>
+            <PlayIcon fontSize="small" />
+          </ListItemIcon>
+          Play
+        </MenuItem>
         <MenuItem onClick={removeSelected} disabled={!canRemove}>
           <ListItemIcon>
             <RemoveIcon fontSize="small" />
           </ListItemIcon>
-          Remove from results{selection.ids.size > 1 ? ` (${selection.ids.size})` : ''}
+          {isQueue ? 'Remove from queue' : 'Remove from results'}
+          {selection.ids.size > 1 ? ` (${selection.ids.size})` : ''}
         </MenuItem>
       </Menu>
     </Box>
@@ -266,9 +326,12 @@ interface TrackRowProps {
   index: number;
   start: number;
   selected: boolean;
+  /** This row is the current track. */
+  current: 'playing' | 'paused' | null;
   /** Column widths, so the row re-renders when a column is resized. */
   sizes: string;
   onClick(event: MouseEvent, id: string): void;
+  onDoubleClick(id: string): void;
   onContextMenu(event: MouseEvent, id: string): void;
 }
 
@@ -277,7 +340,9 @@ const TrackRow = memo(function TrackRow({
   index,
   start,
   selected,
+  current,
   onClick,
+  onDoubleClick,
   onContextMenu,
 }: TrackRowProps) {
   const cells = row.getAllCells();
@@ -287,7 +352,9 @@ const TrackRow = memo(function TrackRow({
       selected={selected}
       aria-selected={selected}
       aria-rowindex={index + 2}
+      aria-current={current ? 'true' : undefined}
       onClick={(event) => onClick(event, row.id)}
+      onDoubleClick={() => onDoubleClick(row.id)}
       onContextMenu={(event) => onContextMenu(event, row.id)}
       sx={{
         display: 'flex',
@@ -313,9 +380,26 @@ const TrackRow = memo(function TrackRow({
         >
           <Box
             component="span"
-            sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            sx={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              fontWeight: current ? 600 : undefined,
+              color: current ? 'primary.main' : undefined,
+            }}
           >
-            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+            {i === 0 && current ? (
+              <NowPlayingIcon
+                aria-label={current === 'playing' ? 'Playing' : 'Paused'}
+                sx={{
+                  fontSize: 16,
+                  verticalAlign: 'middle',
+                  opacity: current === 'paused' ? 0.6 : 1,
+                }}
+              />
+            ) : (
+              flexRender(cell.column.columnDef.cell, cell.getContext())
+            )}
           </Box>
         </TableCell>
       ))}
@@ -327,8 +411,7 @@ function EmptyState({ view }: { view: string }) {
   const status = useCatalogStore((state) => state.status);
   const error = useCatalogStore((state) => state.error);
   let content: React.ReactNode;
-  if (view === 'queue')
-    content = 'Nothing is playing. The play queue arrives with the player (M8).';
+  if (view === 'queue') content = 'The queue is empty. Double-click a track to play it.';
   else if (status === 'loading')
     content = <CircularProgress size={24} aria-label="Loading library" />;
   else if (status === 'waiting') content = 'Waiting for the first library sync with Navidrome…';

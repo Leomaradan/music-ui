@@ -149,11 +149,11 @@ Only one sync runs at a time (in-process lock). Progress is available at `/api/c
 | `/api/catalog/status` | GET | `{syncing, progress, lastSync, trackCount}` |
 | `/api/catalog/rescan` | POST | Starts a sync |
 | `/api/stream/[id]` | GET | Proxies `stream`. Forwards `Range`, streams the body, copies `Content-Type/Length/Range` and `Accept-Ranges`, keeps 200/206, and aborts the upstream call when the client disconnects |
-| `/api/cover/[id]` | GET | Proxies `getCoverArt`, only for sizes 64/150/300/600, with `Cache-Control: max-age=31536000, immutable` |
+| `/api/cover/[id]` | GET | Proxies `getCoverArt`, only for sizes 64/150/300/600, cached one day by the browser (`Cache-Control: private, max-age=86400`: Navidrome cover ids like `mf-<song id>` do not change when the artwork changes) |
 | `/api/playlists` | GET / POST | List playlists (merged with the stored order) / create one from `songIds[]` |
 | `/api/playlists/[id]` | GET / PATCH / DELETE | Tracks / rename, add, remove, reorder tracks / delete |
 | `/api/playlists/order` | PUT | Saves the sidebar order in `app_state` |
-| `/api/queue` | GET / PUT | Navidrome play queue ("currently playing") so it is restored after a reload |
+| `/api/queue` | GET / PUT | Navidrome play queue ("currently playing"): `{ids, index, position}`. Saved with `savePlayQueue` as a form POST (OpenSubsonic `formPost`), at most 5,000 tracks (a window around the current one) |
 
 All routes use the Node runtime and are dynamic. Ids are validated with zod.
 
@@ -190,7 +190,9 @@ Layout uses CSS grid: the top bar has a fixed height, and below it the sidebar h
   - Previous restarts the current track if more than 3 s have played, otherwise it goes to the previous track.
   - Next plays the next track in the queue.
   - At the end of a track the next one starts automatically.
-- The next track is preloaded through a second hidden `<audio preload="auto">` for gapless-ish playback.
+- The next track is preloaded in a second `<audio>` element; when it is asked for, the two elements swap so it starts at once.
+- An unplayable track is skipped, but after 3 failures in a row playback stops with the error (a server outage must not run through the whole queue).
+- Seeks stop 0.25 s before the end, so a paused track seeked to its end moves on instead of restarting.
 - Media Session API: OS media keys and lock-screen controls.
 - Keyboard: Space toggles play/pause, Ctrl+← / Ctrl+→ go to previous / next.
 

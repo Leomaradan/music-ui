@@ -1,13 +1,16 @@
 import type { RequestOptions, SubsonicClient } from './client';
+import { SubsonicError } from './errors';
 import {
   albumList2Schema,
   indexesSchema,
   musicFoldersSchema,
+  playQueueSchema,
   scanStatusSchema,
   searchResult3Schema,
   type Album,
   type Artist,
   type MusicFolder,
+  type PlayQueue,
   type ScanStatus,
   type Song,
 } from './schemas';
@@ -139,4 +142,40 @@ export async function getAlbumList2(
     options,
   );
   return result.album;
+}
+
+/** The user's saved play queue (shared by every client of the account). */
+export async function getPlayQueue(
+  client: SubsonicClient,
+  options?: RequestOptions,
+): Promise<PlayQueue> {
+  const envelope = await client.request('getPlayQueue', {}, options);
+  // An empty queue may come without a playQueue object.
+  const result = playQueueSchema.safeParse(envelope.playQueue ?? {});
+  if (!result.success) {
+    throw new SubsonicError('invalid-response', 'getPlayQueue: unexpected "playQueue" payload', {
+      cause: result.error,
+    });
+  }
+  return result.data;
+}
+
+export interface SavePlayQueueParams {
+  ids: readonly string[];
+  current?: string;
+  /** Milliseconds. */
+  position?: number;
+}
+
+/** Saves the play queue. Sent as a form POST: a queue can hold thousands of ids. */
+export async function savePlayQueue(
+  client: SubsonicClient,
+  { ids, current, position }: SavePlayQueueParams,
+  options?: RequestOptions,
+): Promise<void> {
+  await client.request(
+    'savePlayQueue',
+    { id: ids, current, position: position === undefined ? undefined : Math.round(position) },
+    { ...options, post: true },
+  );
 }

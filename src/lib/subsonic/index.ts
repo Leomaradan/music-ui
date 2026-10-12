@@ -5,15 +5,19 @@ import { SubsonicClient } from './client';
 export * from './client';
 export * from './endpoints';
 export * from './errors';
-export type { Album, Artist, MusicFolder, ScanStatus, Song } from './schemas';
+export type { Album, Artist, MusicFolder, PlayQueue, ScanStatus, Song } from './schemas';
 
-let client: SubsonicClient | undefined;
+// Shared through globalThis: route handlers and instrumentation are bundled separately.
+// Tests install their own client under this key.
+const CLIENT = Symbol.for('music-ui.subsonic.client');
+type Globals = typeof globalThis & { [CLIENT]?: SubsonicClient };
 
 /** Shared client for the configured server and account (PLAN.md §4). */
 export function getSubsonicClient(): SubsonicClient {
-  if (!client) {
+  const globals = globalThis as Globals;
+  if (!globals[CLIENT]) {
     const env = getEnv();
-    client = new SubsonicClient({
+    globals[CLIENT] = new SubsonicClient({
       baseUrl: env.SUBSONIC_URL,
       username: env.SUBSONIC_USER,
       password: env.SUBSONIC_PASSWORD,
@@ -21,5 +25,5 @@ export function getSubsonicClient(): SubsonicClient {
       timeoutMs: env.SUBSONIC_TIMEOUT_MS,
     });
   }
-  return client;
+  return globals[CLIENT];
 }

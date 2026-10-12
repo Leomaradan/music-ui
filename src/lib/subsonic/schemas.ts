@@ -105,3 +105,13 @@ export const searchResult3Schema = z.looseObject({
 export const albumList2Schema = z.looseObject({
   album: z.array(albumSchema).default([]),
 });
+
+export const playQueueSchema = z.looseObject({
+  entry: z.array(songSchema).default([]),
+  /** Id of the current track. */
+  current: z.string().optional(),
+  /** Position in the current track, in milliseconds. */
+  position: z.number().optional(),
+  changed: z.string().optional(),
+});
+export type PlayQueue = z.infer<typeof playQueueSchema>;

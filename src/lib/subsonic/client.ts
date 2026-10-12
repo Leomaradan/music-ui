@@ -30,6 +30,17 @@ export interface SubsonicClientOptions {
 
 export interface RequestOptions {
   signal?: AbortSignal;
+  /**
+   * Send the parameters as a form POST body (OpenSubsonic `formPost`), for requests whose
+   * parameters would not fit in a URL, e.g. a long play queue.
+   */
+  post?: boolean;
+}
+
+export interface BinaryRequestOptions {
+  signal?: AbortSignal;
+  /** Request headers to forward, e.g. `Range`. */
+  headers?: Record<string, string>;
 }
 
 export class SubsonicClient {
@@ -110,21 +121,85 @@ export class SubsonicClient {
     return result.data;
   }
 
-  private async requestOnce(
+  /**
+   * Calls a binary method (`stream`, `getCoverArt`) and returns the raw response, to be
+   * streamed to the browser. The timeout only covers the wait for the response headers;
+   * the body can then take as long as it needs (abort it through `signal`).
+   * Subsonic errors (sent as JSON with HTTP 200) are thrown as `SubsonicError`.
+   */
+  async fetchBinary(
     method: string,
-    params: Params,
-    { signal }: RequestOptions,
-  ): Promise<SubsonicEnvelope> {
-    const timeout = AbortSignal.timeout(this.timeoutMs);
-    const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
+    params: Params = {},
+    { signal, headers = {} }: BinaryRequestOptions = {},
+  ): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(
+      () => controller.abort(new DOMException('timed out', 'TimeoutError')),
+      this.timeoutMs,
+    );
+    const combined = signal ? AbortSignal.any([signal, controller.signal]) : controller.signal;
 
     let response: Response;
     try {
       response = await this.fetchImpl(this.buildUrl(method, params), {
         signal: combined,
-        headers: { accept: 'application/json' },
+        headers,
         cache: 'no-store',
       });
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      throw new SubsonicError(
+        'network',
+        `${method}: Subsonic server unreachable (${describeFetchError(error, this.timeoutMs)})`,
+        { cause: error },
+      );
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (response.headers.get('content-type')?.includes('json')) {
+      // A Subsonic error (a successful binary answer is never JSON).
+      const envelope = await this.parseEnvelope(method, response);
+      const code = envelope.error?.code ?? 0;
+      throw new SubsonicError(
+        'api',
+        `${method}: ${envelope.error?.message ?? 'unexpected JSON response'} (code ${code})`,
+        { code },
+      );
+    }
+    if (!response.ok) {
+      await response.body?.cancel();
+      throw new SubsonicError(
+        'http',
+        `${method}: Subsonic server returned HTTP ${response.status}`,
+      );
+    }
+    return response;
+  }
+
+  private async requestOnce(
+    method: string,
+    params: Params,
+    { signal, post = false }: RequestOptions,
+  ): Promise<SubsonicEnvelope> {
+    const timeout = AbortSignal.timeout(this.timeoutMs);
+    const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
+
+    const url = this.buildUrl(method, params);
+    const init: RequestInit = {
+      signal: combined,
+      headers: { accept: 'application/json' },
+      cache: 'no-store',
+    };
+    if (post) {
+      init.method = 'POST';
+      init.body = new URLSearchParams(url.searchParams);
+      url.search = '';
+    }
+
+    let response: Response;
+    try {
+      response = await this.fetchImpl(url, init);
     } catch (error) {
       if (signal?.aborted) throw error;
       throw new SubsonicError(
@@ -141,6 +216,16 @@ export class SubsonicClient {
       );
     }
 
+    const envelope = await this.parseEnvelope(method, response);
+    if (envelope.status === 'failed') {
+      const code = envelope.error?.code ?? 0;
+      const message = envelope.error?.message ?? 'unknown error';
+      throw new SubsonicError('api', `${method}: ${message} (code ${code})`, { code });
+    }
+    return envelope;
+  }
+
+  private async parseEnvelope(method: string, response: Response): Promise<SubsonicEnvelope> {
     let body: unknown;
     try {
       body = await response.json();
@@ -149,7 +234,6 @@ export class SubsonicClient {
         cause: error,
       });
     }
-
     const parsed = envelopeSchema.safeParse(
       typeof body === 'object' && body !== null
         ? (body as Record<string, unknown>)['subsonic-response']
@@ -160,14 +244,7 @@ export class SubsonicClient {
         cause: parsed.error,
       });
     }
-
-    const envelope = parsed.data;
-    if (envelope.status === 'failed') {
-      const code = envelope.error?.code ?? 0;
-      const message = envelope.error?.message ?? 'unknown error';
-      throw new SubsonicError('api', `${method}: ${message} (code ${code})`, { code });
-    }
-    return envelope;
+    return parsed.data;
   }
 }
 

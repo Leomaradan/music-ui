@@ -3,6 +3,7 @@ import Divider from '@mui/material/Divider';
 import CatalogLoader from '@/components/CatalogLoader/CatalogLoader';
 import Filters from '@/components/Filters/Filters';
 import PlayerBar from '@/components/PlayerBar/PlayerBar';
+import PlayerHost from '@/components/PlayerHost/PlayerHost';
 import Sidebar from '@/components/Sidebar/Sidebar';
 import StatusBar from '@/components/StatusBar/StatusBar';
 import TrackTable from '@/components/TrackTable/TrackTable';
@@ -24,6 +25,7 @@ export default function AppShell() {
       }}
     >
       <CatalogLoader />
+      <PlayerHost />
       <Box sx={{ gridArea: 'player' }}>
         <PlayerBar />
       </Box>

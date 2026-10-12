@@ -47,11 +47,21 @@ export function httpStatusForCode(code: number): number {
   }
 }
 
+const BRAND = Symbol.for('music-ui.SubsonicError');
+
 /**
  * Error raised by the Subsonic client. Messages never contain the request URL,
  * because it carries the reusable auth token.
+ *
+ * `instanceof` works across bundles: Next.js bundles route handlers and instrumentation
+ * separately, each with its own copy of this class, while the client is shared.
  */
 export class SubsonicError extends Error {
+  static [Symbol.hasInstance](value: unknown): boolean {
+    return typeof value === 'object' && value !== null && BRAND in value;
+  }
+
+  readonly [BRAND] = true;
   readonly kind: SubsonicErrorKind;
   /** Subsonic error code, only for `kind: "api"`. */
   readonly code: number | undefined;

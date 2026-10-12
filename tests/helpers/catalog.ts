@@ -31,3 +31,13 @@ export function stubLayout(width = 1200, height = 800): () => void {
     }
   };
 }
+
+/** jsdom does not implement media playback: make play/pause/load no-ops. */
+export function stubMedia(): () => void {
+  const proto = HTMLMediaElement.prototype;
+  const original = { play: proto.play, pause: proto.pause, load: proto.load };
+  proto.play = () => Promise.resolve();
+  proto.pause = () => {};
+  proto.load = () => {};
+  return () => Object.assign(proto, original);
+}

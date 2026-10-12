@@ -134,6 +134,17 @@ describe('SubsonicClient.request', () => {
   });
 });
 
+describe('SubsonicError', () => {
+  it('is recognized by instanceof across copies of the class (separate bundles)', () => {
+    const fromOtherBundle = Object.assign(new Error('x'), {
+      [Symbol.for('music-ui.SubsonicError')]: true,
+    });
+    expect(fromOtherBundle).toBeInstanceOf(SubsonicError);
+    expect(new Error('x')).not.toBeInstanceOf(SubsonicError);
+    expect(new SubsonicError('api', 'x', { code: 70 })).toBeInstanceOf(SubsonicError);
+  });
+});
+
 describe('SubsonicClient.get', () => {
   it('validates the payload under the given key', async () => {
     const { fetch } = fakeFetch(() => jsonResponse(navidromeFixture('getMusicFolders')));

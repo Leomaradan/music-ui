@@ -159,10 +159,10 @@ describe('library view', () => {
     expect(useViewStore.getState().sorting).toEqual([{ id: 'title', desc: true }]);
   });
 
-  it('shows the queue view (empty until the player) and returns to the results on filter change', () => {
+  it('shows the (empty) queue view and returns to the results on filter change', () => {
     renderApp();
     fireEvent.click(screen.getByRole('button', { name: 'Currently playing' }));
-    expect(screen.getByText(/Nothing is playing/)).toBeInTheDocument();
+    expect(screen.getByText(/The queue is empty/)).toBeInTheDocument();
     pick('Genre', 'Pop');
     expect(useViewStore.getState().activeView).toBe('filter');
     expect(titles()).toHaveLength(4);
