@@ -147,3 +147,20 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Local env
+.env
+.env.local
+.env.*.local
+
+# App data (SQLite catalog in dev)
+/data/
+
+# Test output
+coverage/
