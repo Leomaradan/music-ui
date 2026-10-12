@@ -1,0 +1,13 @@
+# Kept out of the image build context. tests/ stays: `next build` type-checks the
+# co-located *.test.ts files, which import tests/helpers.
+.git
+.github
+node_modules
+.next
+coverage
+data
+docker
+unraid
+*.tsbuildinfo
+.env*
+!.env.example

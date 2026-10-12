@@ -294,11 +294,16 @@ music-ui/
 ## 10. Docker & Unraid
 
 **Dockerfile (multi-stage):**
-1. `deps`: `node:26-alpine`, `corepack enable`, `pnpm install --frozen-lockfile`
-2. `build`: `pnpm build` (standalone output)
-3. `runner`: `node:26-alpine`, a non-root user, copies `.next/standalone`, `.next/static` and `public`. It declares `VOLUME /data`, `EXPOSE 3000`, a `HEALTHCHECK` on `/api/health` and runs `CMD ["node","server.js"]`.
+1. `deps`: `node:26-alpine`, installs the pnpm version from `packageManager` with npm (Node 26 no longer ships corepack), `pnpm install --frozen-lockfile`
+2. `build`: `pnpm build` (standalone output; `next/font` fetches Roboto from Google Fonts at build time)
+3. `runner`: `node:26-alpine`, runs as **99:100** (nobody:users, the Unraid appdata owner), copies `.next/standalone` and `.next/static` (there is no `public/`). It sets `HOSTNAME=0.0.0.0`, `PORT=3000`, `DATA_DIR=/data`, declares `VOLUME /data`, `EXPOSE 3000`, a `HEALTHCHECK` on `/api/health` (with Node's `fetch`, no curl/wget needed) and runs `CMD ["node","server.js"]`. Runtime size: about 62 MB on top of the base image.
 
-The image is built for `linux/amd64` only and published to `ghcr.io/leomaradan/music-ui`.
+At startup the app checks that `DATA_DIR` is writable and exits with the `chown` command to run if not.
+
+The image is built for `linux/amd64` only and published to `ghcr.io/leomaradan/music-ui` by CI (`.github/workflows/ci.yml`):
+- `check`: format, lint, typecheck, unit tests, build;
+- `integration`: `docker/compose.dev.yml` (Navidrome) + generated sample music + integration tests;
+- `docker`: builds the image, starts it and waits for the healthcheck to report healthy (smoke test), then pushes `latest` (main), `X.Y.Z` / `X.Y` (tags `vX.Y.Z`) and `sha-…` (not for pull requests).
 
 **Navidrome setup (on Unraid, prerequisite):**
 - Install Navidrome from Community Apps (official `deluan/navidrome` image), port `4533`.
@@ -316,7 +321,7 @@ The image is built for `linux/amd64` only and published to `ghcr.io/leomaradan/m
   - If Navidrome runs as an Unraid container, put both on the same **custom Docker network** and use `http://navidrome:4533`.
   - Otherwise use the Unraid host LAN IP and Navidrome's mapped port.
   - Navidrome's port does not need to be published to the LAN at all when a custom network is used.
-- `PUID/PGID`: the `/data` appdata folder must be writable by the container user (document `chown 99:100` (nobody:users), or run as `99:100`).
+- Permissions: the image runs as 99:100, so `/mnt/user/appdata/music-ui` must belong to `nobody:users` (Unraid's default for appdata). Elsewhere, override the user (`user:` in compose) or `chown` the data folder.
 
 **compose.yml** (for non-template use):
 ```yaml
@@ -361,7 +366,7 @@ networks:
 | M1 | `env.ts` + Navidrome client + tests | `ping`, `getMusicFolders` (2 libraries) and `search3` with `musicFolderId` work against the dev Navidrome |
 | M2 | SQLite + catalog sync + `/api/catalog(/status,/rescan)` | Both dev folders are fully indexed, and a second sync is skipped while Navidrome reports no change |
 | M3 | `/api/stream`, `/api/cover`, `/api/health` | 206 on Range, covers cached, health OK |
-| M4 | Docker image + Unraid template + CI (amd64 → GHCR) | The container runs on Unraid, reaches Navidrome and syncs |
+| M4 | Docker image + Unraid template + CI (amd64 → GHCR) | The container runs on Unraid, reaches Navidrome and syncs. Done: Dockerfile, `compose.yml`, `unraid/music-ui.xml`, CI with an image smoke test |
 
 ### Phase 2 — UI
 | # | Milestone | Done when |

@@ -1,9 +1,14 @@
-// Node.js-only startup: fail fast on invalid configuration (PLAN.md §9), then start the
-// catalog sync scheduler (PLAN.md §5).
+// Node.js-only startup: fail fast on invalid configuration or an unusable data directory
+// (PLAN.md §9), then start the catalog sync scheduler (PLAN.md §5).
+import { checkDataDir } from '@/lib/dataDir';
 import { EnvError, getEnv } from '@/lib/env';
 
 try {
-  getEnv();
+  const problem = checkDataDir(getEnv().DATA_DIR);
+  if (problem) {
+    console.error(problem);
+    process.exit(1);
+  }
 } catch (error) {
   if (error instanceof EnvError) {
     console.error(`${error.message}\nSee .env.example for the expected variables.`);

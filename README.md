@@ -60,6 +60,28 @@ pnpm test:integration                             # runs against http://localhos
 | `pnpm test`                         | Vitest unit tests (integration tests are skipped without a server)   |
 | `pnpm test:integration`             | Integration tests against the dev Navidrome                          |
 
+## Deployment (Unraid)
+
+The image `ghcr.io/leomaradan/music-ui` (linux/amd64) is built and published by CI on every push to `main` (`latest`) and on version tags (`v1.2.3` → `1.2.3`, `1.2`).
+
+**Prerequisite: Navidrome** (0.58 or later). Create one Navidrome library per music folder, and a non-admin user with access to every library: the app uses that account.
+
+**With the Unraid template**
+
+1. Copy `unraid/music-ui.xml` to `/boot/config/plugins/dockerMan/templates-user/my-music-ui.xml` on the Unraid server (e.g. via the flash share).
+2. _Docker → Add Container → Template: music-ui_.
+3. Fill in _Navidrome URL_, _user_ and _password_. If Navidrome runs on the same server, put both containers on the same custom Docker network (_Network type_) and use `http://navidrome:4533`; otherwise use `http://<server IP>:4533`.
+4. Apply, then open the WebUI (port 3000). The first library sync starts at once.
+
+**With Docker Compose**: see `compose.yml` (`SUBSONIC_PASSWORD=… docker compose up -d`).
+
+Notes:
+
+- The container runs as `99:100` (nobody:users). If `/mnt/user/appdata/music-ui` belongs to someone else, the container stops at startup and prints the `chown` command to run.
+- GitHub packages of a private repository are private: either make the `music-ui` package public (GitHub → Packages → music-ui → Package settings), or `docker login ghcr.io` on the server with a token that can read packages.
+- To build the image yourself: `docker build -t music-ui .`
+- `/api/health` reports `degraded` (HTTP 200) when Navidrome is unreachable: the container stays healthy, since restarting it would not help.
+
 ## Status
 
 - [x] M0 — Scaffold: Next.js, TypeScript, MUI theme (light/dark), static app shell, oxlint/oxfmt, Vitest
@@ -72,4 +94,4 @@ pnpm test:integration                             # runs against http://localhos
 - [x] M8 — Player: transport, seek, volume, queue ("Currently playing"), Media Session, saved queue
 - [x] M9 — Playlists: sidebar, drag tracks to create / append / queue, reorder, rename, delete
 - [x] M10 — Settings (library status, rescan, theme, layout reset, shortcuts), track in the tab title
-- [ ] M4 — Docker image, Unraid template, CI
+- [x] M4 — Docker image (`ghcr.io/leomaradan/music-ui`), Unraid template, CI
