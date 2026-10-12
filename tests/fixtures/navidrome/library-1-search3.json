@@ -1,0 +1,422 @@
+{
+  "subsonic-response": {
+    "status": "ok",
+    "version": "1.16.1",
+    "type": "navidrome",
+    "serverVersion": "0.64.2 (10114574)",
+    "openSubsonic": true,
+    "searchResult3": {
+      "song": [
+        {
+          "id": "3LbikHn2XIS3HeWazU08rD",
+          "parent": "3uZ2r1ByBF71qchXZm6oZG",
+          "isDir": false,
+          "title": "Love in an Elevator",
+          "album": "Pump",
+          "artist": "Aerosmith",
+          "track": 1,
+          "year": 1989,
+          "genre": "Rock",
+          "size": 129327,
+          "contentType": "audio/mpeg",
+          "suffix": "mp3",
+          "duration": 8,
+          "bitRate": 128,
+          "path": "Aerosmith/Pump/01 - Love in an Elevator.mp3",
+          "created": "2026-10-12T07:25:10.84863561Z",
+          "albumId": "3uZ2r1ByBF71qchXZm6oZG",
+          "artistId": "3IuN91bZn6R4OGPP2GYfdO",
+          "type": "music",
+          "bpm": 0,
+          "comment": "",
+          "sortName": "love in an elevator",
+          "mediaType": "song",
+          "musicBrainzId": "",
+          "isrc": [],
+          "genres": [
+            {
+              "name": "Rock"
+            }
+          ],
+          "replayGain": {},
+          "channelCount": 2,
+          "samplingRate": 44100,
+          "bitDepth": 0,
+          "moods": [],
+          "artists": [
+            {
+              "id": "3IuN91bZn6R4OGPP2GYfdO",
+              "name": "Aerosmith"
+            }
+          ],
+          "displayArtist": "Aerosmith",
+          "albumArtists": [
+            {
+              "id": "3IuN91bZn6R4OGPP2GYfdO",
+              "name": "Aerosmith"
+            }
+          ],
+          "displayAlbumArtist": "Aerosmith",
+          "contributors": [],
+          "displayComposer": "",
+          "explicitStatus": "",
+          "groupings": [],
+          "works": [],
+          "movements": []
+        },
+        {
+          "id": "4WRe3XN3ghQwCg107F2CiZ",
+          "parent": "06DjnnRReUfc4YAHHhUHAG",
+          "isDir": false,
+          "title": "Walk This Way",
+          "album": "Toys in the Attic",
+          "artist": "Aerosmith",
+          "track": 1,
+          "year": 1975,
+          "genre": "Rock",
+          "size": 129334,
+          "contentType": "audio/mpeg",
+          "suffix": "mp3",
+          "duration": 8,
+          "bitRate": 128,
+          "path": "Aerosmith/Toys in the Attic/01 - Walk This Way.mp3",
+          "created": "2026-10-12T07:25:10.853834456Z",
+          "albumId": "06DjnnRReUfc4YAHHhUHAG",
+          "artistId": "3IuN91bZn6R4OGPP2GYfdO",
+          "type": "music",
+          "bpm": 0,
+          "comment": "",
+          "sortName": "walk this way",
+          "mediaType": "song",
+          "musicBrainzId": "",
+          "isrc": [],
+          "genres": [
+            {
+              "name": "Rock"
+            }
+          ],
+          "replayGain": {},
+          "channelCount": 2,
+          "samplingRate": 44100,
+          "bitDepth": 0,
+          "moods": [],
+          "artists": [
+            {
+              "id": "3IuN91bZn6R4OGPP2GYfdO",
+              "name": "Aerosmith"
+            }
+          ],
+          "displayArtist": "Aerosmith",
+          "albumArtists": [
+            {
+              "id": "3IuN91bZn6R4OGPP2GYfdO",
+              "name": "Aerosmith"
+            }
+          ],
+          "displayAlbumArtist": "Aerosmith",
+          "contributors": [],
+          "displayComposer": "",
+          "explicitStatus": "",
+          "groupings": [],
+          "works": [],
+          "movements": []
+        },
+        {
+          "id": "34gTH7IJ8R82ybDhqQ34Gp",
+          "parent": "06DjnnRReUfc4YAHHhUHAG",
+          "isDir": false,
+          "title": "Sweet Emotion",
+          "album": "Toys in the Attic",
+          "artist": "Aerosmith",
+          "track": 2,
+          "year": 1975,
+          "genre": "Rock",
+          "size": 129334,
+          "contentType": "audio/mpeg",
+          "suffix": "mp3",
+          "duration": 8,
+          "bitRate": 128,
+          "path": "Aerosmith/Toys in the Attic/02 - Sweet Emotion.mp3",
+          "created": "2026-10-12T07:25:10.854707951Z",
+          "albumId": "06DjnnRReUfc4YAHHhUHAG",
+          "artistId": "3IuN91bZn6R4OGPP2GYfdO",
+          "type": "music",
+          "bpm": 0,
+          "comment": "",
+          "sortName": "sweet emotion",
+          "mediaType": "song",
+          "musicBrainzId": "",
+          "isrc": [],
+          "genres": [
+            {
+              "name": "Rock"
+            }
+          ],
+          "replayGain": {},
+          "channelCount": 2,
+          "samplingRate": 44100,
+          "bitDepth": 0,
+          "moods": [],
+          "artists": [
+            {
+              "id": "3IuN91bZn6R4OGPP2GYfdO",
+              "name": "Aerosmith"
+            }
+          ],
+          "displayArtist": "Aerosmith",
+          "albumArtists": [
+            {
+              "id": "3IuN91bZn6R4OGPP2GYfdO",
+              "name": "Aerosmith"
+            }
+          ],
+          "displayAlbumArtist": "Aerosmith",
+          "contributors": [],
+          "displayComposer": "",
+          "explicitStatus": "",
+          "groupings": [],
+          "works": [],
+          "movements": []
+        },
+        {
+          "id": "02a6ACkpl1SXjzYMaHdxP9",
+          "parent": "2fqF38DPTuuDTcSA9PFpNT",
+          "isDir": false,
+          "title": "Sunny Day",
+          "album": "Summer Hits",
+          "artist": "Artist One",
+          "track": 1,
+          "year": 2001,
+          "genre": "Pop",
+          "size": 129336,
+          "contentType": "audio/mpeg",
+          "suffix": "mp3",
+          "duration": 8,
+          "bitRate": 128,
+          "path": "Various Artists/Summer Hits/01 - Sunny Day.mp3",
+          "created": "2026-10-12T07:25:10.866017367Z",
+          "albumId": "2fqF38DPTuuDTcSA9PFpNT",
+          "artistId": "5CFLlrcAjywbI577YUqwsD",
+          "type": "music",
+          "bpm": 0,
+          "comment": "",
+          "sortName": "sunny day",
+          "mediaType": "song",
+          "musicBrainzId": "",
+          "isrc": [],
+          "genres": [
+            {
+              "name": "Pop"
+            },
+            {
+              "name": "Dance"
+            }
+          ],
+          "replayGain": {},
+          "channelCount": 2,
+          "samplingRate": 44100,
+          "bitDepth": 0,
+          "moods": [],
+          "artists": [
+            {
+              "id": "5CFLlrcAjywbI577YUqwsD",
+              "name": "Artist One"
+            }
+          ],
+          "displayArtist": "Artist One",
+          "albumArtists": [
+            {
+              "id": "63sqASlAfjbGMuLP4JhnZU",
+              "name": "Various Artists"
+            }
+          ],
+          "displayAlbumArtist": "Various Artists",
+          "contributors": [],
+          "displayComposer": "",
+          "explicitStatus": "",
+          "groupings": [],
+          "works": [],
+          "movements": []
+        },
+        {
+          "id": "4gOO9pLRBVbbdFnSmgAcW8",
+          "parent": "2fqF38DPTuuDTcSA9PFpNT",
+          "isDir": false,
+          "title": "Beach Night",
+          "album": "Summer Hits",
+          "artist": "Artist Two feat. Artist One",
+          "track": 2,
+          "year": 2001,
+          "genre": "Pop",
+          "size": 129355,
+          "contentType": "audio/mpeg",
+          "suffix": "mp3",
+          "duration": 8,
+          "bitRate": 128,
+          "path": "Various Artists/Summer Hits/02 - Beach Night.mp3",
+          "created": "2026-10-12T07:25:10.867202364Z",
+          "albumId": "2fqF38DPTuuDTcSA9PFpNT",
+          "artistId": "6PjdNPpWZhgT3Erk7ALxUs",
+          "type": "music",
+          "bpm": 0,
+          "comment": "",
+          "sortName": "beach night",
+          "mediaType": "song",
+          "musicBrainzId": "",
+          "isrc": [],
+          "genres": [
+            {
+              "name": "Pop"
+            },
+            {
+              "name": "Dance"
+            }
+          ],
+          "replayGain": {},
+          "channelCount": 2,
+          "samplingRate": 44100,
+          "bitDepth": 0,
+          "moods": [],
+          "artists": [
+            {
+              "id": "6PjdNPpWZhgT3Erk7ALxUs",
+              "name": "Artist Two"
+            },
+            {
+              "id": "5CFLlrcAjywbI577YUqwsD",
+              "name": "Artist One"
+            }
+          ],
+          "displayArtist": "Artist Two feat. Artist One",
+          "albumArtists": [
+            {
+              "id": "63sqASlAfjbGMuLP4JhnZU",
+              "name": "Various Artists"
+            }
+          ],
+          "displayAlbumArtist": "Various Artists",
+          "contributors": [],
+          "displayComposer": "",
+          "explicitStatus": "",
+          "groupings": [],
+          "works": [],
+          "movements": []
+        },
+        {
+          "id": "7cYkanwfv2rdtXfeXCkR4h",
+          "parent": "5X9iupbHykcoxdksxvZ8To",
+          "isDir": false,
+          "title": "Knowing Me, Knowing You",
+          "album": "Arrival",
+          "artist": "ABBA",
+          "track": 2,
+          "year": 1976,
+          "genre": "Pop",
+          "size": 129323,
+          "contentType": "audio/mpeg",
+          "suffix": "mp3",
+          "duration": 8,
+          "bitRate": 128,
+          "path": "ABBA/Arrival/02 - Knowing Me, Knowing You.mp3",
+          "created": "2026-10-12T07:25:10.877062194Z",
+          "albumId": "5X9iupbHykcoxdksxvZ8To",
+          "artistId": "4ByFDbM4ptBfCcuCLGd8eA",
+          "type": "music",
+          "bpm": 0,
+          "comment": "",
+          "sortName": "knowing me, knowing you",
+          "mediaType": "song",
+          "musicBrainzId": "",
+          "isrc": [],
+          "genres": [
+            {
+              "name": "Pop"
+            }
+          ],
+          "replayGain": {},
+          "channelCount": 2,
+          "samplingRate": 44100,
+          "bitDepth": 0,
+          "moods": [],
+          "artists": [
+            {
+              "id": "4ByFDbM4ptBfCcuCLGd8eA",
+              "name": "ABBA"
+            }
+          ],
+          "displayArtist": "ABBA",
+          "albumArtists": [
+            {
+              "id": "4ByFDbM4ptBfCcuCLGd8eA",
+              "name": "ABBA"
+            }
+          ],
+          "displayAlbumArtist": "ABBA",
+          "contributors": [],
+          "displayComposer": "",
+          "explicitStatus": "",
+          "groupings": [],
+          "works": [],
+          "movements": []
+        },
+        {
+          "id": "35dqDqnMDFECu5ParKZgsU",
+          "parent": "5X9iupbHykcoxdksxvZ8To",
+          "isDir": false,
+          "title": "Dancing Queen",
+          "album": "Arrival",
+          "artist": "ABBA",
+          "track": 1,
+          "year": 1976,
+          "genre": "Pop",
+          "size": 129313,
+          "contentType": "audio/mpeg",
+          "suffix": "mp3",
+          "duration": 8,
+          "bitRate": 128,
+          "path": "ABBA/Arrival/01 - Dancing Queen.mp3",
+          "created": "2026-10-12T07:25:10.878156893Z",
+          "albumId": "5X9iupbHykcoxdksxvZ8To",
+          "artistId": "4ByFDbM4ptBfCcuCLGd8eA",
+          "type": "music",
+          "bpm": 0,
+          "comment": "",
+          "sortName": "dancing queen",
+          "mediaType": "song",
+          "musicBrainzId": "",
+          "isrc": [],
+          "genres": [
+            {
+              "name": "Pop"
+            }
+          ],
+          "replayGain": {},
+          "channelCount": 2,
+          "samplingRate": 44100,
+          "bitDepth": 0,
+          "moods": [],
+          "artists": [
+            {
+              "id": "4ByFDbM4ptBfCcuCLGd8eA",
+              "name": "ABBA"
+            }
+          ],
+          "displayArtist": "ABBA",
+          "albumArtists": [
+            {
+              "id": "4ByFDbM4ptBfCcuCLGd8eA",
+              "name": "ABBA"
+            }
+          ],
+          "displayAlbumArtist": "ABBA",
+          "contributors": [],
+          "displayComposer": "",
+          "explicitStatus": "",
+          "groupings": [],
+          "works": [],
+          "movements": []
+        }
+      ]
+    }
+  }
+}

@@ -1,4 +1,5 @@
-// Node.js-only startup checks: fail fast on invalid configuration (PLAN.md §9).
+// Node.js-only startup: fail fast on invalid configuration (PLAN.md §9), then start the
+// catalog sync scheduler (PLAN.md §5).
 import { EnvError, getEnv } from '@/lib/env';
 
 try {
@@ -10,3 +11,6 @@ try {
   }
   throw error;
 }
+
+const { startCatalogScheduler } = await import('@/lib/catalog');
+startCatalogScheduler();

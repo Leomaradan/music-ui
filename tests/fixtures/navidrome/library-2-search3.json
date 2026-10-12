@@ -1,0 +1,184 @@
+{
+  "subsonic-response": {
+    "status": "ok",
+    "version": "1.16.1",
+    "type": "navidrome",
+    "serverVersion": "0.64.2 (10114574)",
+    "openSubsonic": true,
+    "searchResult3": {
+      "song": [
+        {
+          "id": "4cUPTgJopep8DBV4TH6St3",
+          "parent": "1Xo05zZEl1ynuTNV8Pu5ir",
+          "isDir": false,
+          "title": "Back in the Saddle (Live)",
+          "album": "Live! Bootleg",
+          "artist": "Aerosmith",
+          "track": 1,
+          "year": 1978,
+          "genre": "Rock",
+          "size": 129342,
+          "contentType": "audio/mpeg",
+          "suffix": "mp3",
+          "duration": 8,
+          "bitRate": 128,
+          "path": "Aerosmith/Live! Bootleg/01 - Back in the Saddle (Live).mp3",
+          "created": "2026-10-12T07:25:10.858542641Z",
+          "albumId": "1Xo05zZEl1ynuTNV8Pu5ir",
+          "artistId": "3IuN91bZn6R4OGPP2GYfdO",
+          "type": "music",
+          "bpm": 0,
+          "comment": "",
+          "sortName": "back in the saddle (live)",
+          "mediaType": "song",
+          "musicBrainzId": "",
+          "isrc": [],
+          "genres": [
+            {
+              "name": "Rock"
+            }
+          ],
+          "replayGain": {},
+          "channelCount": 2,
+          "samplingRate": 44100,
+          "bitDepth": 0,
+          "moods": [],
+          "artists": [
+            {
+              "id": "3IuN91bZn6R4OGPP2GYfdO",
+              "name": "Aerosmith"
+            }
+          ],
+          "displayArtist": "Aerosmith",
+          "albumArtists": [
+            {
+              "id": "3IuN91bZn6R4OGPP2GYfdO",
+              "name": "Aerosmith"
+            }
+          ],
+          "displayAlbumArtist": "Aerosmith",
+          "contributors": [],
+          "displayComposer": "",
+          "explicitStatus": "",
+          "groupings": [],
+          "works": [],
+          "movements": []
+        },
+        {
+          "id": "6zhR5A4Y5hf000sPh6O0Ck",
+          "parent": "2NfIfJ2FAXw0gWcQPGmTmU",
+          "isDir": false,
+          "title": "So What (Live)",
+          "album": "Live at the Plugged Nickel",
+          "artist": "Miles Davis",
+          "track": 1,
+          "year": 1965,
+          "genre": "Jazz",
+          "size": 129348,
+          "contentType": "audio/mpeg",
+          "suffix": "mp3",
+          "duration": 8,
+          "bitRate": 128,
+          "path": "Miles Davis/Live at the Plugged Nickel/01 - So What (Live).mp3",
+          "created": "2026-10-12T07:25:10.871134283Z",
+          "albumId": "2NfIfJ2FAXw0gWcQPGmTmU",
+          "artistId": "5dJa2S23ao1lAQokLHKFPR",
+          "type": "music",
+          "bpm": 0,
+          "comment": "",
+          "sortName": "so what (live)",
+          "mediaType": "song",
+          "musicBrainzId": "",
+          "isrc": [],
+          "genres": [
+            {
+              "name": "Jazz"
+            }
+          ],
+          "replayGain": {},
+          "channelCount": 2,
+          "samplingRate": 44100,
+          "bitDepth": 0,
+          "moods": [],
+          "artists": [
+            {
+              "id": "5dJa2S23ao1lAQokLHKFPR",
+              "name": "Miles Davis"
+            }
+          ],
+          "displayArtist": "Miles Davis",
+          "albumArtists": [
+            {
+              "id": "5dJa2S23ao1lAQokLHKFPR",
+              "name": "Miles Davis"
+            }
+          ],
+          "displayAlbumArtist": "Miles Davis",
+          "contributors": [],
+          "displayComposer": "",
+          "explicitStatus": "",
+          "groupings": [],
+          "works": [],
+          "movements": []
+        },
+        {
+          "id": "3pKWPK4cGKSu1dg0dnXvxc",
+          "parent": "2NfIfJ2FAXw0gWcQPGmTmU",
+          "isDir": false,
+          "title": "Stella by Starlight (Live)",
+          "album": "Live at the Plugged Nickel",
+          "artist": "Miles Davis",
+          "track": 2,
+          "year": 1965,
+          "genre": "Jazz",
+          "size": 129360,
+          "contentType": "audio/mpeg",
+          "suffix": "mp3",
+          "duration": 8,
+          "bitRate": 128,
+          "path": "Miles Davis/Live at the Plugged Nickel/02 - Stella by Starlight (Live).mp3",
+          "created": "2026-10-12T07:25:10.872343611Z",
+          "albumId": "2NfIfJ2FAXw0gWcQPGmTmU",
+          "artistId": "5dJa2S23ao1lAQokLHKFPR",
+          "type": "music",
+          "bpm": 0,
+          "comment": "",
+          "sortName": "stella by starlight (live)",
+          "mediaType": "song",
+          "musicBrainzId": "",
+          "isrc": [],
+          "genres": [
+            {
+              "name": "Jazz"
+            }
+          ],
+          "replayGain": {},
+          "channelCount": 2,
+          "samplingRate": 44100,
+          "bitDepth": 0,
+          "moods": [],
+          "artists": [
+            {
+              "id": "5dJa2S23ao1lAQokLHKFPR",
+              "name": "Miles Davis"
+            }
+          ],
+          "displayArtist": "Miles Davis",
+          "albumArtists": [
+            {
+              "id": "5dJa2S23ao1lAQokLHKFPR",
+              "name": "Miles Davis"
+            }
+          ],
+          "displayAlbumArtist": "Miles Davis",
+          "contributors": [],
+          "displayComposer": "",
+          "explicitStatus": "",
+          "groupings": [],
+          "works": [],
+          "movements": []
+        }
+      ]
+    }
+  }
+}

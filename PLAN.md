@@ -124,19 +124,19 @@ app_state(key, json)       -- sidebar playlist order, misc UI prefs
 2. For each folder:
    - page through `search3` with an empty query and `musicFolderId` (500 songs per call) to get every track of that folder;
    - page through `getAlbumList2(musicFolderId)` to get the albums and their **album artist**.
-3. Tracks are joined to their album by `albumId` to fill `albumArtist`. Genres come from the song's `genres[]` (falling back to `genre`).
-4. Everything is written into fresh tables in one transaction, then swapped in, and `catalogVersion` is increased. A full sync is cheap: about 100 calls for 50k tracks, so no incremental logic is needed at first.
+3. The album artist comes from the song's `displayAlbumArtist` / `albumArtists[]` (Navidrome), falling back to its album's artist. Genres come from the song's `genres[]` (falling back to `genre`).
+4. Everything is replaced in one transaction (readers keep the previous catalog until it commits; a failed sync leaves it untouched), and `catalogVersion` changes. A full sync is cheap: about 100 calls for 50k tracks, so no incremental logic is needed at first.
 
 **Triggers:**
-- At startup if the DB is empty.
-- Periodically: every `SYNC_INTERVAL_MINUTES`, a cheap check (`getScanStatus` last scan time + `getIndexes` `lastModified`) starts a sync only when Navidrome has rescanned since the last sync.
+- At startup (a no-op when nothing changed since the last sync, so restarts are cheap).
+- Periodically: every `SYNC_INTERVAL_MINUTES`, a cheap check (`getScanStatus` last scan time + `getIndexes` `lastModified`) starts a sync only when Navidrome has rescanned since the last sync. The marker also includes the folder list, so renaming or adding a library triggers a sync. Syncs wait while Navidrome is scanning.
 - A manual "Rescan" button in Settings.
 
 Only one sync runs at a time (in-process lock). Progress is available at `/api/catalog/status`.
 
 **Snapshot endpoint `/api/catalog`:**
 - Format is columnar and compact: `{version, folders[], genres[], artists[], albums[], tracks:{id[], title[], artistIdx[], albumIdx[], genreIdx[], folderIdx[], year[], track[], disc[], duration[], …}}`. Strings are stored once in dictionaries and tracks refer to them by index.
-- Responses are gzipped and carry `ETag: catalogVersion`. The client caches the snapshot in IndexedDB and revalidates with `If-None-Match`.
+- Responses carry `ETag: catalogVersion` and are gzipped by the app itself, once per catalog version (Next.js does not compress route handler responses). The client caches the snapshot in IndexedDB and revalidates with `If-None-Match`.
 
 ---
 
@@ -356,7 +356,7 @@ networks:
 |---|---|---|
 | M0 | Scaffold: Next.js + TS + MUI + oxlint/oxfmt + Vitest, Node 26 | `pnpm dev` shows the themed empty shell |
 | M1 | `env.ts` + Navidrome client + tests | `ping`, `getMusicFolders` (2 libraries) and `search3` with `musicFolderId` work against the dev Navidrome |
-| M2 | SQLite + catalog sync + `/api/catalog(/status,/rescan)` | Both dev folders are fully indexed, and a second sync is incremental |
+| M2 | SQLite + catalog sync + `/api/catalog(/status,/rescan)` | Both dev folders are fully indexed, and a second sync is skipped while Navidrome reports no change |
 | M3 | `/api/stream`, `/api/cover`, `/api/health` | 206 on Range, covers cached, health OK |
 | M4 | Docker image + Unraid template + CI (amd64 → GHCR) | The container runs on Unraid, reaches Navidrome and syncs |
 
