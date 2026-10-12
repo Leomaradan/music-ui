@@ -1,6 +1,6 @@
 # Music UI — Application Plan
 
-A self-hosted web music player in the style of a desktop music library: a column browser with cascading filters and a track table. It runs in Docker on an **Unraid** server and uses a private **Airsonic** server as its music backend.
+A self-hosted web music player in the style of a desktop music library: a column browser with cascading filters and a track table. It runs in Docker on an **Unraid** server and uses a private **Subsonic-compatible** server (Airsonic in this document; the final choice is still open, see §13) as its music backend.
 
 - **Phase 1 (base):** running, configuration, Subsonic proxy, music catalog, listing.
 - **Phase 2 (UI):** player bar, playlists sidebar, cascading filters, track table, drag & drop.
@@ -12,7 +12,7 @@ A self-hosted web music player in the style of a desktop music library: a column
 | Topic | Decision |
 |---|---|
 | Host | Unraid, x86-64 → image built for `linux/amd64` only |
-| Backend | **Airsonic** (Subsonic API ≤ 1.15/1.16, **no OpenSubsonic extensions**) |
+| Backend | **Subsonic-compatible server, not installed yet** (Airsonic, Airsonic-Advanced or Navidrome, see §13). The app targets the **common Subsonic API 1.15** and builds its own catalog (§5), so it does not depend on server-specific features |
 | Network | **LAN only**, plain HTTP. Airsonic is reachable only from the app container |
 | Accounts | **One shared Airsonic account** configured by env vars. The app has **no login screen** |
 | Stack | Next.js (App Router, TypeScript) + Material UI, Node.js **26 LTS** (`node:26-alpine`) |
@@ -105,7 +105,9 @@ Rough size: 50 000 tracks come to about 6–8 MB of JSON, or about 1–1.5 MB gz
 ```
 folders(id, name)
 albums (id, folderId, name, artist, artistId, year, genre, coverArt, songCount, created)
-tracks (id, folderId, albumId, title, artist, artistId, album, genre, year,
+tracks (id, folderId, albumId, title, artist, artistId,
+        albumArtist, albumArtistId,   -- copied from the album (getAlbum)
+        album, genre, year,
         track, disc, duration, bitRate, suffix, size, coverArt, path)
 meta   (key, value)        -- lastSync, lastModified, catalogVersion
 app_state(key, json)       -- sidebar playlist order, misc UI prefs
@@ -192,11 +194,14 @@ Items, from top to bottom:
 
 Drop targets for tracks dragged from the table:
 - The **empty area / "new playlist" zone** creates a new playlist. It is created immediately with an inline-editable default name ("New playlist").
-- An **existing playlist** (*proposed*): the tracks are appended.
-- **Currently playing** (*proposed*): the tracks are added to the queue.
+- An **existing playlist**: the tracks are appended to it.
+- **Currently playing**: the tracks are added to the end of the queue.
+
+The **filter boxes are always visible**, whichever sidebar item is selected. When "Currently playing" or a custom playlist is shown, the boxes keep displaying the current filter state but do not filter that list. **Changing any filter switches the view to "Filter results".**
 
 ### 7.3 Filters (right, upper part)
 Four boxes in a row: **Music Folder → Genre → Artist → Album**.
+- The **Artist** box uses the **album artist** (`albumArtist` from §5), not the track artist. A compilation therefore appears under its album artist (for example "Various Artists"), and a "feat." track appears under the main album's artist.
 - Each box is a **multi-select list** (MUI `List` with checkboxes, virtualized for long lists). Each box has a small search field, a "clear" action and a count per item.
 - **Nothing selected = everything selected** for that level.
 - **Cascade (options):** each box only lists values present in the tracks that match all **previous** boxes.
@@ -211,17 +216,17 @@ Four boxes in a row: **Music Folder → Genre → Artist → Album**.
 - Columns: `#`, Title, Artist, Album, Genre, Year, Duration, Folder, Format/Bitrate. Columns are sortable (click a header) and their width can be changed. The default sort is Artist → Year → Album → Disc → Track.
 - Virtualized rows, so 50k+ tracks remain smooth.
 - **Selection:** click, Ctrl/Cmd-click (toggle), Shift-click (range), Ctrl+A (all).
-- **Delete** key or the context menu "Remove from results" adds the selected tracks to the **exclusion set** of "Filter results". The tracks are hidden only. Nothing is deleted from disk or Airsonic.
+- **Delete** key or the context menu "Remove from results" adds the selected tracks to the **exclusion set** of "Filter results". The tracks are hidden only. Nothing is deleted from disk or from the server. **The exclusion set is cleared whenever any filter changes**, so removed tracks come back.
   - Inside a custom playlist, Delete removes the tracks from that playlist through `updatePlaylist`.
   - Inside Currently playing, Delete removes the tracks from the queue.
-- **Double-click** a track: the current table list (or the visible order) replaces "Currently playing" and playback starts at that track (*proposed*).
+- **Double-click** a track: the current table list, in its visible (sorted) order, replaces "Currently playing" and playback starts at that track.
 - **Drag** the selected rows onto the sidebar (§7.2). A drag overlay shows "N tracks".
 
 ### 7.5 Client state (Zustand stores)
 | Store | Contents | Persistence |
 |---|---|---|
 | `catalogStore` | Decoded snapshot, lookup maps | IndexedDB (snapshot + ETag) |
-| `filterStore` | `folders[]`, `genres[]`, `artists[]`, `albums[]`, `excluded: Set<trackId>` | localStorage |
+| `filterStore` | `folders[]`, `genres[]`, `albumArtists[]`, `albums[]`, `excluded: Set<trackId>` (cleared on any filter change) | localStorage |
 | `viewStore` | Active sidebar item, table sort, column widths, row selection | localStorage (not selection) |
 | `playerStore` | Queue (track ids), index, state, position, volume | Airsonic play queue + localStorage |
 | `playlistStore` | Playlists, order, cached tracks | Server (`/api/playlists`) |
@@ -352,12 +357,15 @@ networks:
 
 ---
 
-## 13. Open questions
+## 13. Open questions & decisions log
 
-1. **Airsonic flavor:** original Airsonic or **Airsonic-Advanced**? Both work with API 1.15. Advanced is faster for the crawl and fixes some JSON quirks.
-2. **Artist filter field:** filter on the **track artist** (proposed) or the **album artist**? This matters for compilations and "feat." tracks.
-3. **Exclusions lifetime:** should tracks removed from "Filter results" stay hidden (a) until a manual "reset", (b) until any filter changes, or (c) permanently, like a hide list? The proposal is (b): they are cleared when a filter changes.
-4. **Dropping onto an existing playlist / Currently playing:** append (proposed), or only "create new playlist"?
-5. **Double-click behavior:** replace the queue with the current table list and start at the track (proposed), or just append the track?
-6. **Selecting a custom playlist in the sidebar:** the table then shows that playlist. Should the filter boxes be hidden, or should they filter inside the playlist?
-7. **Library size** (approx. number of tracks)? This confirms the in-browser catalog approach. It is comfortable up to about 150k tracks.
+**Decided:**
+- Artist filter = **album artist**.
+- Removed tracks come back **when any filter changes**.
+- Dropping tracks on an existing playlist or on Currently playing **appends** them.
+- Double-click **replaces the queue** with the table list and starts at that track.
+- Filters are **always displayed**, and changing one switches the view to Filter results.
+- Library size is unknown. The in-browser catalog is kept, and performance will be addressed later if needed.
+
+**Still open:**
+1. **Which server to install:** original Airsonic, Airsonic-Advanced or Navidrome. Recommendation: **Navidrome** first, otherwise Airsonic-Advanced. Original Airsonic is no longer maintained. The app is designed to work with any of them. One thing to verify before committing to Navidrome: that `getMusicFolders` returns its libraries and `getAlbumList2` honors `musicFolderId` (multi-library support since v0.58.0).
