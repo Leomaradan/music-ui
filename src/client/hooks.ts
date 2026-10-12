@@ -7,7 +7,8 @@ import { tracksById, unknownTrack } from '@/client/catalog/lookup';
 import { useCatalogStore } from '@/client/stores/catalogStore';
 import { useFilterStore } from '@/client/stores/filterStore';
 import { selectCurrentTrackId, usePlayerStore } from '@/client/stores/playerStore';
-import { useViewStore } from '@/client/stores/viewStore';
+import { usePlaylistStore } from '@/client/stores/playlistStore';
+import { playlistOfView, useViewStore } from '@/client/stores/viewStore';
 
 const NO_TRACKS: Track[] = [];
 
@@ -18,15 +19,26 @@ export function useFacets(): Facets | null {
   return catalog ? getFacets(catalog, filters) : null;
 }
 
-/** Tracks of the play queue, in queue order (placeholders for tracks no longer in the library). */
-export function useQueueTracks(): Track[] {
+/** Tracks for a list of ids, in order (placeholders for tracks no longer in the library). */
+function useTracksOf(ids: readonly string[] | undefined): Track[] {
   const catalog = useCatalogStore((state) => state.catalog);
-  const queue = usePlayerStore((state) => state.queue);
   return useMemo(() => {
-    if (!catalog || queue.length === 0) return NO_TRACKS;
+    if (!catalog || !ids || ids.length === 0) return NO_TRACKS;
     const byId = tracksById(catalog);
-    return queue.map((id) => byId.get(id) ?? unknownTrack(id));
-  }, [catalog, queue]);
+    return ids.map((id) => byId.get(id) ?? unknownTrack(id));
+  }, [catalog, ids]);
+}
+
+/** Tracks of the play queue, in queue order. */
+export function useQueueTracks(): Track[] {
+  return useTracksOf(usePlayerStore((state) => state.queue));
+}
+
+/** Tracks of the playlist shown in the table (empty until loaded). */
+function usePlaylistTracks(playlistId: string | null): Track[] {
+  return useTracksOf(
+    usePlaylistStore((state) => (playlistId ? state.tracks[playlistId] : undefined)),
+  );
 }
 
 /** Tracks listed by the table for the active sidebar entry, before sorting. */
@@ -35,13 +47,15 @@ export function useTableTracks(): Track[] {
   const queueTracks = useQueueTracks();
   const excluded = useFilterStore((state) => state.excluded);
   const view = useViewStore((state) => state.activeView);
+  const playlistTracks = usePlaylistTracks(playlistOfView(view));
   return useMemo(() => {
     if (view === 'queue') return queueTracks;
+    if (playlistOfView(view)) return playlistTracks;
     if (!facets) return NO_TRACKS;
     if (excluded.length === 0) return facets.tracks;
     const hidden = new Set(excluded);
     return facets.tracks.filter((track) => !hidden.has(track.id));
-  }, [facets, queueTracks, excluded, view]);
+  }, [facets, queueTracks, playlistTracks, excluded, view]);
 }
 
 /** The track being played (or paused), if any. */

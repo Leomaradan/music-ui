@@ -115,7 +115,7 @@ function startMediaSession(): () => void {
 
 const TYPING = 'input, textarea, select, [contenteditable="true"]';
 const OWN_SPACE =
-  'button, a, [role="option"], [role="slider"], [role="checkbox"], [role="menuitem"]';
+  'button, a, [role="button"], [role="option"], [role="slider"], [role="checkbox"], [role="menuitem"]';
 
 function onShortcutKeyDown(event: KeyboardEvent): void {
   const target = event.target instanceof Element ? event.target : null;

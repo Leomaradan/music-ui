@@ -72,7 +72,7 @@ Rough size: 50 000 tracks come to about 6–8 MB of JSON, or about 1–1.5 MB gz
 | Server DB | SQLite via built-in **`node:sqlite`** | Built into Node, so there is nothing native to compile on Alpine. `better-sqlite3` is the fallback if needed |
 | Client state | **Zustand** (catalog, filters, selection, player, playlists) | Small stores with selectors |
 | Track table | **TanStack Table v9 + TanStack Virtual**, rendered with MUI `Table` components | Sorting and column resizing from TanStack; selection is the app's own (`src/client/selection.ts`). Measured with 50k tracks: ~0.7 s first render, <0.2 s per filter change. Avoids MUI X Pro licensing |
-| Drag & drop | **dnd-kit** (`@dnd-kit/core`, `@dnd-kit/sortable`) | Reordering the sidebar, and dragging table rows onto the sidebar |
+| Drag & drop | **dnd-kit** (`@dnd-kit/core`, `@dnd-kit/sortable`) for reordering the sidebar; **native HTML drag and drop** for table rows → sidebar | Native DnD for rows because the dragged row can scroll out of the virtualized table mid-drag |
 | Validation | `zod` | Env vars, API inputs, Navidrome responses |
 | Tests | Vitest + MSW, Playwright | |
 | Tooling | pnpm, **oxlint** (lint), **oxfmt** (format), TypeScript strict | Oxc tools (Rust), much faster than ESLint/Prettier. Oxlint plugins enabled: typescript, react (incl. hooks rules), nextjs, jsx-a11y, import, unicorn, vitest. Config: `.oxlintrc.json`, `.oxfmtrc.json`. Disabled on purpose: `no-await-in-loop` (sequential server calls are intentional), `jsx-a11y/prefer-tag-over-role` (virtualized listbox/grid widgets need ARIA roles), `react/incompatible-library` (React Compiler is not used) |
@@ -151,7 +151,7 @@ Only one sync runs at a time (in-process lock). Progress is available at `/api/c
 | `/api/stream/[id]` | GET | Proxies `stream`. Forwards `Range`, streams the body, copies `Content-Type/Length/Range` and `Accept-Ranges`, keeps 200/206, and aborts the upstream call when the client disconnects |
 | `/api/cover/[id]` | GET | Proxies `getCoverArt`, only for sizes 64/150/300/600, cached one day by the browser (`Cache-Control: private, max-age=86400`: Navidrome cover ids like `mf-<song id>` do not change when the artwork changes) |
 | `/api/playlists` | GET / POST | List playlists (merged with the stored order) / create one from `songIds[]` |
-| `/api/playlists/[id]` | GET / PATCH / DELETE | Tracks / rename, add, remove, reorder tracks / delete |
+| `/api/playlists/[id]` | GET / PATCH / DELETE | Tracks / rename, append, remove by position / delete |
 | `/api/playlists/order` | PUT | Saves the sidebar order in `app_state` |
 | `/api/queue` | GET / PUT | Navidrome play queue ("currently playing"): `{ids, index, position}`. Saved with `savePlayQueue` as a form POST (OpenSubsonic `formPost`), at most 5,000 tracks (a window around the current one) |
 

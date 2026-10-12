@@ -4,8 +4,14 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { browserLocalStorage } from '@/client/storage/local';
 
-/** Sidebar entry shown in the track table (custom playlists arrive in M9). */
-export type ActiveView = 'queue' | 'filter';
+/** Sidebar entry shown in the track table: the queue, the filter results or a playlist. */
+export type ActiveView = 'queue' | 'filter' | `playlist:${string}`;
+
+export const viewOfPlaylist = (id: string): ActiveView => `playlist:${id}`;
+
+/** The playlist id of a playlist view, or null. */
+export const playlistOfView = (view: ActiveView): string | null =>
+  view.startsWith('playlist:') ? view.slice('playlist:'.length) : null;
 
 export interface SortEntry {
   id: string;

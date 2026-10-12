@@ -5,7 +5,16 @@ import { SubsonicClient } from './client';
 export * from './client';
 export * from './endpoints';
 export * from './errors';
-export type { Album, Artist, MusicFolder, PlayQueue, ScanStatus, Song } from './schemas';
+export type {
+  Album,
+  Artist,
+  MusicFolder,
+  PlayQueue,
+  Playlist,
+  PlaylistWithSongs,
+  ScanStatus,
+  Song,
+} from './schemas';
 
 // Shared through globalThis: route handlers and instrumentation are bundled separately.
 // Tests install their own client under this key.

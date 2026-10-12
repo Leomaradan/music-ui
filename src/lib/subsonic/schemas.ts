@@ -115,3 +115,28 @@ export const playQueueSchema = z.looseObject({
   changed: z.string().optional(),
 });
 export type PlayQueue = z.infer<typeof playQueueSchema>;
+
+export const playlistSchema = z.looseObject({
+  id: z.string(),
+  name: z.string().default(''),
+  songCount: z.number().default(0),
+  /** Seconds. */
+  duration: z.number().default(0),
+  owner: z.string().optional(),
+  public: z.boolean().optional(),
+  /** OpenSubsonic: the user cannot modify it (e.g. owned by someone else). */
+  readonly: z.boolean().optional(),
+  coverArt: z.string().optional(),
+  created: z.string().optional(),
+  changed: z.string().optional(),
+});
+export type Playlist = z.infer<typeof playlistSchema>;
+
+export const playlistsSchema = z.looseObject({
+  playlist: z.array(playlistSchema).default([]),
+});
+
+export const playlistWithSongsSchema = playlistSchema.extend({
+  entry: z.array(songSchema).default([]),
+});
+export type PlaylistWithSongs = z.infer<typeof playlistWithSongsSchema>;

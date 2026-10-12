@@ -1,6 +1,7 @@
 import 'server-only';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
+import { AppStateRepository } from '@/lib/appState';
 import { openDatabase } from '@/lib/db';
 import { getEnv } from '@/lib/env';
 import { createLogger } from '@/lib/logger';
@@ -21,6 +22,8 @@ export interface SerializedSnapshot {
 
 export interface CatalogService {
   repository: CatalogRepository;
+  /** App-owned settings stored next to the catalog (playlist order…). */
+  appState: AppStateRepository;
   sync: CatalogSync;
   /** Snapshot of the current catalog (JSON + gzip), or null before the first sync. */
   snapshot(): SerializedSnapshot | null;
@@ -29,10 +32,12 @@ export interface CatalogService {
 export function createCatalogService(
   repository: CatalogRepository,
   sync: CatalogSync,
+  appState: AppStateRepository,
 ): CatalogService {
   let cache: SerializedSnapshot | null = null;
   return {
     repository,
+    appState,
     sync,
     snapshot() {
       const version = repository.getMeta(MetaKey.Version);
@@ -59,13 +64,14 @@ export function getCatalogService(): CatalogService {
   const globals = globalThis as Globals;
   if (!globals[SERVICE]) {
     const env = getEnv();
-    const repository = new CatalogRepository(openDatabase(join(env.DATA_DIR, 'music-ui.db')));
+    const db = openDatabase(join(env.DATA_DIR, 'music-ui.db'));
+    const repository = new CatalogRepository(db);
     const sync = new CatalogSync({
       client: getSubsonicClient(),
       repository,
       logger: createLogger('catalog', env.LOG_LEVEL),
     });
-    globals[SERVICE] = createCatalogService(repository, sync);
+    globals[SERVICE] = createCatalogService(repository, sync, new AppStateRepository(db));
   }
   return globals[SERVICE];
 }

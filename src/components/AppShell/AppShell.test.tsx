@@ -31,7 +31,9 @@ describe('AppShell', () => {
 
   it('renders the four filter boxes in cascade order', () => {
     renderShell();
-    const boxes = screen.getAllByRole('region').map((el) => el.getAttribute('aria-label'));
+    const boxes = within(screen.getByRole('main'))
+      .getAllByRole('region')
+      .map((el) => el.getAttribute('aria-label'));
     expect(boxes).toEqual(['Music Folder', 'Genre', 'Artist', 'Album']);
   });
 

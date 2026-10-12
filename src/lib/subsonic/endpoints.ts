@@ -5,12 +5,16 @@ import {
   indexesSchema,
   musicFoldersSchema,
   playQueueSchema,
+  playlistsSchema,
+  playlistWithSongsSchema,
   scanStatusSchema,
   searchResult3Schema,
   type Album,
   type Artist,
   type MusicFolder,
   type PlayQueue,
+  type Playlist,
+  type PlaylistWithSongs,
   type ScanStatus,
   type Song,
 } from './schemas';
@@ -178,4 +182,63 @@ export async function savePlayQueue(
     { id: ids, current, position: position === undefined ? undefined : Math.round(position) },
     { ...options, post: true },
   );
+}
+
+export async function getPlaylists(
+  client: SubsonicClient,
+  options?: RequestOptions,
+): Promise<Playlist[]> {
+  const result = await client.get('getPlaylists', 'playlists', playlistsSchema, {}, options);
+  return result.playlist;
+}
+
+export function getPlaylist(
+  client: SubsonicClient,
+  id: string,
+  options?: RequestOptions,
+): Promise<PlaylistWithSongs> {
+  return client.get('getPlaylist', 'playlist', playlistWithSongsSchema, { id }, options);
+}
+
+/**
+ * Creates a playlist, or replaces the tracks of `playlistId`. Sent as a form POST: a playlist
+ * can hold thousands of tracks.
+ */
+export function createPlaylist(
+  client: SubsonicClient,
+  params: { name?: string; playlistId?: string; songIds: readonly string[] },
+  options?: RequestOptions,
+): Promise<PlaylistWithSongs> {
+  return client.get(
+    'createPlaylist',
+    'playlist',
+    playlistWithSongsSchema,
+    { name: params.name, playlistId: params.playlistId, songId: params.songIds },
+    { ...options, post: true },
+  );
+}
+
+export interface UpdatePlaylistParams {
+  playlistId: string;
+  name?: string;
+  /** Appended at the end. */
+  songIdToAdd?: readonly string[];
+  /** Positions (0-based) in the playlist before the update. */
+  songIndexToRemove?: readonly number[];
+}
+
+export async function updatePlaylist(
+  client: SubsonicClient,
+  params: UpdatePlaylistParams,
+  options?: RequestOptions,
+): Promise<void> {
+  await client.request('updatePlaylist', { ...params }, { ...options, post: true });
+}
+
+export async function deletePlaylist(
+  client: SubsonicClient,
+  id: string,
+  options?: RequestOptions,
+): Promise<void> {
+  await client.request('deletePlaylist', { id }, options);
 }

@@ -4,6 +4,7 @@ import { FakeNavidrome } from '../helpers/fake-navidrome';
 import { GET as getCatalog } from '@/app/api/catalog/route';
 import { POST as rescan } from '@/app/api/catalog/rescan/route';
 import { GET as getStatus } from '@/app/api/catalog/status/route';
+import { AppStateRepository } from '@/lib/appState';
 import { createCatalogService, type CatalogService } from '@/lib/catalog';
 import { CatalogRepository } from '@/lib/catalog/repository';
 import { CatalogSync } from '@/lib/catalog/sync';
@@ -12,9 +13,10 @@ import { openDatabase } from '@/lib/db';
 const SERVICE = Symbol.for('music-ui.catalog.service');
 
 function installService(): CatalogService {
-  const repository = new CatalogRepository(openDatabase(':memory:'));
+  const db = openDatabase(':memory:');
+  const repository = new CatalogRepository(db);
   const sync = new CatalogSync({ client: new FakeNavidrome().client(), repository });
-  const service = createCatalogService(repository, sync);
+  const service = createCatalogService(repository, sync, new AppStateRepository(db));
   (globalThis as Record<symbol, unknown>)[SERVICE] = service;
   return service;
 }

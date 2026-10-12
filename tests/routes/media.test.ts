@@ -4,6 +4,7 @@ import { GET as getCover } from '@/app/api/cover/[id]/route';
 import { GET as getHealth } from '@/app/api/health/route';
 import { GET as getQueue, PUT as putQueue } from '@/app/api/queue/route';
 import { GET as getStream } from '@/app/api/stream/[id]/route';
+import { AppStateRepository } from '@/lib/appState';
 import { createCatalogService } from '@/lib/catalog';
 import { CatalogRepository } from '@/lib/catalog/repository';
 import { CatalogSync } from '@/lib/catalog/sync';
@@ -23,8 +24,13 @@ function installUpstream(handler: Parameters<typeof fakeFetch>[0]) {
     fetch: fake.fetch,
   });
   globals[CLIENT] = client;
-  const repository = new CatalogRepository(openDatabase(':memory:'));
-  globals[SERVICE] = createCatalogService(repository, new CatalogSync({ client, repository }));
+  const db = openDatabase(':memory:');
+  const repository = new CatalogRepository(db);
+  globals[SERVICE] = createCatalogService(
+    repository,
+    new CatalogSync({ client, repository }),
+    new AppStateRepository(db),
+  );
   return fake;
 }
 
