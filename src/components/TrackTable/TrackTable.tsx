@@ -37,7 +37,8 @@ export default function TrackTable() {
               align="center"
               sx={{ color: 'text.secondary', py: 4 }}
             >
-              No tracks yet. The library is loaded from Navidrome starting with M2.
+              The track list is not wired to the catalog yet (M5–M7). The synced library is visible
+              at /api/catalog/status.
             </TableCell>
           </TableRow>
         </TableBody>
