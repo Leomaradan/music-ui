@@ -1,4 +1,4 @@
-import { formatCount, formatDuration, formatTotalDuration } from './format';
+import { formatCount, formatDuration, formatRelativeTime, formatTotalDuration } from './format';
 
 it('formats durations', () => {
   expect(formatDuration(0)).toBe('0:00');
@@ -9,4 +9,15 @@ it('formats durations', () => {
   expect(formatTotalDuration(3 * 3600 + 12 * 60)).toBe('3 h 12 min');
   expect(formatTotalDuration(52 * 3600)).toBe('2 days 4 h');
   expect(formatCount(50000)).toBe('50,000');
+});
+
+it('formats relative times', () => {
+  const now = new Date('2026-10-12T12:00:00Z');
+  const ago = (seconds: number) =>
+    formatRelativeTime(new Date(now.getTime() - seconds * 1000), now);
+  expect(ago(10)).toBe('just now');
+  expect(ago(5 * 60)).toBe('5 minutes ago');
+  expect(ago(3 * 3600)).toBe('3 hours ago');
+  expect(ago(86_400)).toBe('yesterday');
+  expect(ago(3 * 86_400)).toBe('3 days ago');
 });

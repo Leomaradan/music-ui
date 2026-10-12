@@ -19,3 +19,22 @@ export function formatTotalDuration(seconds: number): string {
 
 const numberFormat = new Intl.NumberFormat('en-US');
 export const formatCount = (n: number) => numberFormat.format(n);
+
+const relative = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+
+/** "just now", "5 minutes ago", "yesterday"… */
+export function formatRelativeTime(date: Date, now: Date = new Date()): string {
+  const seconds = Math.round((date.getTime() - now.getTime()) / 1000);
+  if (Math.abs(seconds) < 45) return 'just now';
+  const units: [Intl.RelativeTimeFormatUnit, number][] = [
+    ['minute', 60],
+    ['hour', 3600],
+    ['day', 86_400],
+  ];
+  let unit: Intl.RelativeTimeFormatUnit = 'minute';
+  let size = 60;
+  for (const [candidate, candidateSize] of units) {
+    if (Math.abs(seconds) >= candidateSize) [unit, size] = [candidate, candidateSize];
+  }
+  return relative.format(Math.round(seconds / size), unit);
+}

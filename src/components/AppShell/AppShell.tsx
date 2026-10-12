@@ -5,6 +5,7 @@ import Filters from '@/components/Filters/Filters';
 import Notifier from '@/components/Notifier/Notifier';
 import PlayerBar from '@/components/PlayerBar/PlayerBar';
 import PlayerHost from '@/components/PlayerHost/PlayerHost';
+import SettingsDialog from '@/components/SettingsDialog/SettingsDialog';
 import Sidebar from '@/components/Sidebar/Sidebar';
 import StatusBar from '@/components/StatusBar/StatusBar';
 import TrackTable from '@/components/TrackTable/TrackTable';
@@ -28,6 +29,7 @@ export default function AppShell() {
       <CatalogLoader />
       <PlayerHost />
       <Notifier />
+      <SettingsDialog />
       <Box sx={{ gridArea: 'player' }}>
         <PlayerBar />
       </Box>

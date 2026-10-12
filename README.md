@@ -34,6 +34,7 @@ At startup, and then every `SYNC_INTERVAL_MINUTES`, the server copies the librar
 - **Player bar:** previous (restarts the track after 3 s), play/pause, stop, next, seek slider, volume. Space toggles play/pause, Ctrl/Cmd + ←/→ previous/next; OS media keys work too.
 - **Currently playing:** the queue in play order. Double-click jumps to a track; Delete removes tracks from the queue.
 - **Playlists** (stored in Navidrome): drag tracks from the table (the selection, or the dragged row) onto the dashed zone to create a playlist, onto a playlist to append them, or onto _Currently playing_ to queue them. **+** creates an empty playlist. Drag playlists to reorder them (the order is kept by the app). Double-click or right-click → _Rename_; right-click → _Delete…_ (asks first). Open a playlist to see its tracks: Delete removes tracks from it, double-click plays it. Playlists you cannot change (owned by another user) show a lock.
+- **Settings** (gear icon, top right): Navidrome connection and library sync status, _Rescan library_, theme (System / Light / Dark), reset of the table sort and column widths, and the list of keyboard shortcuts (also opened with `?`).
 - Filters, removed tracks, sort and column widths are remembered in the browser. The queue and position are remembered in the browser and saved to the Navidrome play queue (shared with other clients of the account). The catalog is cached in IndexedDB and revalidated every minute and when the tab becomes visible.
 
 ### Dev Navidrome
@@ -70,4 +71,5 @@ pnpm test:integration                             # runs against http://localhos
 - [x] M7 — Virtualized track table: sort, resize, multi-select, remove from results
 - [x] M8 — Player: transport, seek, volume, queue ("Currently playing"), Media Session, saved queue
 - [x] M9 — Playlists: sidebar, drag tracks to create / append / queue, reorder, rename, delete
+- [x] M10 — Settings (library status, rescan, theme, layout reset, shortcuts), track in the tab title
 - [ ] M4 — Docker image, Unraid template, CI

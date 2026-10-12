@@ -10,6 +10,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import MusicNoteIcon from '@mui/icons-material/MusicNote';
 import PauseIcon from '@mui/icons-material/Pause';
+import SettingsIcon from '@mui/icons-material/Settings';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
 import SkipPreviousIcon from '@mui/icons-material/SkipPrevious';
@@ -19,6 +20,7 @@ import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import { formatDuration } from '@/client/format';
 import { useCurrentTrack } from '@/client/hooks';
 import { usePlayerStore } from '@/client/stores/playerStore';
+import { useUiStore } from '@/client/stores/uiStore';
 
 const player = () => usePlayerStore.getState();
 const toggle = () => player().toggle();
@@ -27,8 +29,9 @@ const next = () => player().next();
 const previous = () => player().previous();
 const seek = (seconds: number) => player().seek(seconds);
 const setVolume = (volume: number) => player().setVolume(volume);
+const openSettings = () => useUiStore.getState().openSettings();
 
-/** Top bar (PLAN.md §7.1): transport buttons, current track, seek slider, volume. */
+/** Top bar (PLAN.md §7.1): transport buttons, current track, seek slider, volume, settings. */
 export default function PlayerBar() {
   const status = usePlayerStore((state) => state.status);
   const index = usePlayerStore((state) => state.index);
@@ -160,6 +163,11 @@ export default function PlayerBar() {
             onChange={(_, value) => setVolume(value as number)}
           />
         </Box>
+        <Tooltip title="Settings">
+          <IconButton aria-label="Settings" onClick={openSettings}>
+            <SettingsIcon />
+          </IconButton>
+        </Tooltip>
       </Toolbar>
     </AppBar>
   );

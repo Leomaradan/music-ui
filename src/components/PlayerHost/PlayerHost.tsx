@@ -6,13 +6,14 @@ import { AudioEngine } from '@/client/player/engine';
 import { startQueuePersistence } from '@/client/player/persistence';
 import { useCatalogStore } from '@/client/stores/catalogStore';
 import { attachEngine, selectCurrentTrackId, usePlayerStore } from '@/client/stores/playerStore';
+import { useUiStore } from '@/client/stores/uiStore';
 
 const ARTWORK_SIZES = [150, 300, 600] as const;
 const player = () => usePlayerStore.getState();
 
 /**
  * Wires the player (PLAN.md §7.1): audio engine, queue persistence, Media Session (OS media
- * keys, lock screen) and keyboard shortcuts. Renders nothing.
+ * keys, lock screen), keyboard shortcuts and the document title. Renders nothing.
  */
 export default function PlayerHost() {
   useEffect(() => {
@@ -26,7 +27,9 @@ export default function PlayerHost() {
     const stopPersistence = startQueuePersistence();
     const stopMediaSession = startMediaSession();
     const stopShortcuts = startShortcuts();
+    const stopTitle = startDocumentTitle();
     return () => {
+      stopTitle();
       stopShortcuts();
       stopMediaSession();
       stopPersistence();
@@ -120,7 +123,10 @@ const OWN_SPACE =
 function onShortcutKeyDown(event: KeyboardEvent): void {
   const target = event.target instanceof Element ? event.target : null;
   if (target?.closest(TYPING)) return;
-  if (event.key === ' ' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+  if (event.key === '?' && !event.ctrlKey && !event.metaKey) {
+    event.preventDefault();
+    useUiStore.getState().openSettings('shortcuts');
+  } else if (event.key === ' ' && !event.ctrlKey && !event.metaKey && !event.altKey) {
     if (target?.closest(OWN_SPACE)) return;
     event.preventDefault();
     player().toggle();
@@ -133,8 +139,39 @@ function onShortcutKeyDown(event: KeyboardEvent): void {
   }
 }
 
-/** Space: play/pause. Ctrl/Cmd + ←/→: previous/next track. */
+/** Space: play/pause. Ctrl/Cmd + ←/→: previous/next track. ?: shortcuts (see SHORTCUTS). */
 function startShortcuts(): () => void {
   window.addEventListener('keydown', onShortcutKeyDown);
   return () => window.removeEventListener('keydown', onShortcutKeyDown);
+}
+
+export const APP_TITLE = 'Music UI';
+
+/** "▶ Title — Artist · Music UI" while a track is loaded. */
+export function documentTitle(
+  track: { title: string; artist: string } | undefined,
+  playing: boolean,
+): string {
+  if (!track) return APP_TITLE;
+  const name = [track.title, track.artist].filter(Boolean).join(' — ');
+  return `${playing ? '▶ ' : ''}${name} · ${APP_TITLE}`;
+}
+
+function updateDocumentTitle(): void {
+  const state = player();
+  const trackId = selectCurrentTrackId(state);
+  const catalog = useCatalogStore.getState().catalog;
+  const track = trackId && catalog ? tracksById(catalog).get(trackId) : undefined;
+  document.title = documentTitle(track, state.status === 'playing' || state.status === 'loading');
+}
+
+function startDocumentTitle(): () => void {
+  updateDocumentTitle();
+  const unsubscribePlayer = usePlayerStore.subscribe(updateDocumentTitle);
+  const unsubscribeCatalog = useCatalogStore.subscribe(updateDocumentTitle);
+  return () => {
+    unsubscribePlayer();
+    unsubscribeCatalog();
+    document.title = APP_TITLE;
+  };
 }

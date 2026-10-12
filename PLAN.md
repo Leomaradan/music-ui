@@ -371,7 +371,7 @@ networks:
 | M7 | Virtualized track table: sort, multi-select, remove from results | Smooth with 50k rows, exclusions work |
 | M8 | Player bar + audio engine + Currently playing queue (+ Navidrome play queue) | Play, pause, stop, previous, next and seek work, and the queue survives a reload |
 | M9 | Playlists: sidebar list, DnD reorder, drag tracks → new playlist, rename/delete | The order persists, and playlists also show up in Navidrome |
-| M10 | Polish: keyboard shortcuts, Media Session, settings dialog (rescan, status), dark mode | |
+| M10 | Polish: keyboard shortcuts, Media Session, settings dialog (rescan, status), dark mode | Settings (gear in the player bar): Navidrome connection, sync status/progress, rescan; theme System/Light/Dark (saved per browser); reset sort and column widths; shortcuts list (also `?`). Track shown in the browser tab title |
 
 ---
 
