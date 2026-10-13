@@ -1,7 +1,18 @@
 'use client';
 
 import { create } from 'zustand';
+import { tracksById, unknownTrack } from '@/client/catalog/lookup';
+import {
+  isEndless,
+  nextUnit,
+  planQueue,
+  replanUpcoming,
+  toModeTrack,
+  type ModeTrack,
+  type PlaybackMode,
+} from '@/client/player/modes';
 import { RESTART_THRESHOLD, removeFromQueue } from '@/client/player/queue';
+import { useCatalogStore } from './catalogStore';
 
 export type PlaybackStatus = 'stopped' | 'loading' | 'playing' | 'paused';
 
@@ -23,6 +34,9 @@ export interface PlayerEngine {
 interface PlayerState {
   /** Track ids of "Currently playing" (duplicates allowed). */
   queue: string[];
+  /** The tracks playback was started from (table rows, playlist): what the modes draw from. */
+  selection: string[];
+  mode: PlaybackMode;
   /** Current track in `queue`, -1 when none. */
   index: number;
   status: PlaybackStatus;
@@ -38,8 +52,15 @@ interface PlayerState {
    */
   resumePending: boolean;
 
-  /** Replaces the queue and starts playing at `startIndex`. */
+  /** Replaces the queue with these tracks, as they are, and plays from `startIndex`. */
   playQueue(trackIds: string[], startIndex: number): void;
+  /**
+   * Plays a selection in the current mode: `start` is the track the user picked (played
+   * first), or null to let the mode choose (a playlist played as a whole).
+   */
+  playSelection(trackIds: string[], start: number | null): void;
+  /** Changes the mode; during playback, what comes next is re-planned, history is kept. */
+  setMode(mode: PlaybackMode): void;
   /** Jumps to a queue entry (plays it, or only selects it with `autoplay: false`). */
   playIndex(index: number, autoplay?: boolean): void;
   enqueue(trackIds: string[]): void;
@@ -56,7 +77,14 @@ interface PlayerState {
   setVolume(volume: number): void;
 
   /** Restores a saved queue (stopped, at the saved position). */
-  restore(saved: { queue: string[]; index: number; position: number; volume?: number }): void;
+  restore(saved: {
+    queue: string[];
+    index: number;
+    position: number;
+    volume?: number;
+    mode?: PlaybackMode;
+    selection?: string[];
+  }): void;
 
   // Reports from the engine.
   reportStatus(status: PlaybackStatus): void;
@@ -88,15 +116,32 @@ export const MAX_CONSECUTIVE_ERRORS = 3;
 
 const isActive = (status: PlaybackStatus) => status === 'playing' || status === 'loading';
 
+/** Mode metadata for track ids (from the catalog; unknown ids stand alone). */
+function modeTracksOf(ids: readonly string[]): ModeTrack[] {
+  const catalog = useCatalogStore.getState().catalog;
+  const byId = catalog ? tracksById(catalog) : undefined;
+  return ids.map((id) => toModeTrack(byId?.get(id) ?? unknownTrack(id)));
+}
+
 export const usePlayerStore = create<PlayerState>()((set, get) => {
   let consecutiveErrors = 0;
+  /** Endless modes: keep at least one track after the current one. */
+  const extendQueue = () => {
+    const { mode, selection, queue, index } = get();
+    if (!isEndless(mode) || selection.length === 0 || index < queue.length - 1) return;
+    const unit = nextUnit(mode, modeTracksOf(selection), queue);
+    if (unit.length) set({ queue: [...queue, ...unit] });
+  };
   const preloadNext = () => {
+    extendQueue();
     const { queue, index } = get();
     engine?.preload(index >= 0 ? (queue[index + 1] ?? null) : null);
   };
 
   return {
     queue: [],
+    selection: [],
+    mode: 'order',
     index: -1,
     status: 'stopped',
     position: 0,
@@ -106,8 +151,25 @@ export const usePlayerStore = create<PlayerState>()((set, get) => {
     resumePending: false,
 
     playQueue(trackIds, startIndex) {
-      set({ queue: [...trackIds] });
+      set({ queue: [...trackIds], selection: [...trackIds] });
       get().playIndex(startIndex);
+    },
+
+    playSelection(trackIds, start) {
+      const plan = planQueue(get().mode, modeTracksOf(trackIds), start);
+      if (plan.index < 0) return;
+      set({ queue: plan.queue, selection: [...trackIds] });
+      get().playIndex(plan.index);
+    },
+
+    setMode(mode) {
+      const { queue, index, selection } = get();
+      set({ mode });
+      if (index < 0 || selection.length === 0) return;
+      const history = queue.slice(0, index + 1);
+      const upcoming = replanUpcoming(mode, modeTracksOf(selection), history);
+      set({ queue: [...history, ...upcoming] });
+      preloadNext();
     },
 
     playIndex(index, autoplay = true) {
@@ -197,10 +259,12 @@ export const usePlayerStore = create<PlayerState>()((set, get) => {
       engine?.setVolume(clamped);
     },
 
-    restore({ queue, index, position, volume }) {
+    restore({ queue, index, position, volume, mode, selection }) {
       const valid = index >= 0 && index < queue.length;
       set({
         queue,
+        selection: selection ?? queue,
+        ...(mode ? { mode } : {}),
         index: valid ? index : -1,
         position: valid ? position : 0,
         status: 'stopped',

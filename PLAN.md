@@ -197,6 +197,21 @@ Layout uses CSS grid: the top bar has a fixed height, and below it the sidebar h
 - A page reload necessarily stops the audio. If a track was playing less than 60 s before the page loads, playback resumes at the saved position; when the browser's autoplay policy refuses, the bar asks for a click and the next click or key press anywhere resumes.
 - Keyboard: Space toggles play/pause, Ctrl+← / Ctrl+→ go to previous / next.
 
+### 7.1b Playback modes
+The mode button (next to Next) picks how a selection becomes the queue. The selection is what playback starts from: the table rows (double-click, Enter, *Play*) or a playlist (double-click in the sidebar). The double-clicked track always plays first; in album / artist modes its album continues from it.
+
+| Mode | Queue |
+|---|---|
+| In order (default) | The selection as listed |
+| Shuffle | Random permutation, each track once |
+| Random | Endless: the next track is drawn when the queue runs out. A track is not drawn again within half the selection (max 100 tracks); the weight of a track drops with its play count and when its (track) artist was heard recently |
+| Shuffle by album | Whole albums (disc / track order) in random order, each album once |
+| Random by album | Endless whole albums: not repeated within half the albums (max 20), albums of recently heard album artists weigh less |
+| Shuffle by artist | One random album per album artist, artists in random order, each artist once |
+| Random by artist | Endless: an artist not heard within half the artists (max 10), then one of their albums, least played first, never the same as last time |
+
+Changing the mode during playback keeps what has been played and re-plans what comes next (album and artist modes finish the current album first). Random modes keep one unit ahead so *Next* and preloading work. The mode and the selection are saved with the queue. Implementation: `src/client/player/modes.ts` (pure, tested with a seeded generator; ~20 ms for a 50k-track selection).
+
 ### 7.2 Sidebar (left)
 Items, from top to bottom:
 1. **Currently playing.** Always first and fixed. It is the play queue. Selecting it shows the queue in the table, with the current track highlighted.

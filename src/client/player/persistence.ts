@@ -1,5 +1,6 @@
 'use client';
 
+import { PLAYBACK_MODES, type PlaybackMode } from '@/client/player/modes';
 import { queueWindow } from '@/client/player/queue';
 import { usePlayerStore } from '@/client/stores/playerStore';
 
@@ -21,7 +22,15 @@ interface Saved {
   playing: boolean;
   /** Epoch ms of the save. */
   savedAt: number;
+  mode: PlaybackMode;
+  /** What the playback modes draw from (see playerStore). */
+  selection: string[];
 }
+
+const isMode = (value: unknown): value is PlaybackMode =>
+  PLAYBACK_MODES.some((entry) => entry.mode === value);
+const stringArray = (value: unknown): string[] | null =>
+  Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : null;
 
 function readLocal(): Saved | null {
   try {
@@ -36,6 +45,8 @@ function readLocal(): Saved | null {
       volume: typeof saved.volume === 'number' ? saved.volume : 1,
       playing: saved.playing === true,
       savedAt: typeof saved.savedAt === 'number' ? saved.savedAt : 0,
+      mode: isMode(saved.mode) ? saved.mode : 'order',
+      selection: stringArray(saved.selection) ?? [],
     };
   } catch {
     return null;
@@ -43,8 +54,10 @@ function readLocal(): Saved | null {
 }
 
 function writeLocal(): void {
-  const { queue, index, position, volume, status } = usePlayerStore.getState();
+  const { queue, index, position, volume, status, mode, selection } = usePlayerStore.getState();
   const saved: Saved = {
+    mode,
+    selection,
     queue,
     index,
     position,
@@ -95,7 +108,10 @@ function onPageHide(): void {
 export function startQueuePersistence(): () => void {
   const local = readLocal();
   if (local) {
-    usePlayerStore.getState().restore(local);
+    usePlayerStore.getState().restore({
+      ...local,
+      selection: local.selection.length ? local.selection : local.queue,
+    });
     // It was playing just before the page reloaded: carry on (the browser may require a
     // click first, see PlayerHost).
     if (local.playing && local.index >= 0 && Date.now() - local.savedAt < RESUME_WINDOW_MS) {
@@ -122,7 +138,8 @@ export function startQueuePersistence(): () => void {
     const queueChanged = state.queue !== previous.queue || state.index !== previous.index;
     const stopped =
       state.status !== previous.status && (state.status === 'paused' || state.status === 'stopped');
-    if (queueChanged || stopped || state.volume !== previous.volume) writeLocal();
+    const settingsChanged = state.volume !== previous.volume || state.mode !== previous.mode;
+    if (queueChanged || stopped || settingsChanged) writeLocal();
     if (queueChanged || stopped) scheduleServerSave();
   });
 

@@ -132,6 +132,36 @@ describe('player', () => {
     expect(usePlayerStore.getState()).toMatchObject({ status: 'stopped', resumePending: false });
   });
 
+  it('picks a playback mode from the player bar', () => {
+    renderApp();
+    fireEvent.click(within(bar()).getByRole('button', { name: 'Playback mode: In order' }));
+    const menu = screen.getByRole('menu', { name: 'Playback mode' });
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((item) => item.querySelector('.MuiListItemText-primary')?.textContent),
+    ).toEqual([
+      'In order',
+      'Shuffle',
+      'Random',
+      'Shuffle by album',
+      'Random by album',
+      'Shuffle by artist',
+      'Random by artist',
+    ]);
+    fireEvent.click(within(menu).getByRole('menuitem', { name: /^Shuffle by album/ }));
+    expect(usePlayerStore.getState().mode).toBe('albumShuffle');
+    expect(
+      within(bar()).getByRole('button', { name: 'Playback mode: Shuffle by album' }),
+    ).toBeInTheDocument();
+
+    // The double-clicked track plays first, its album continues.
+    fireEvent.doubleClick(rows()[2]!);
+    const queue = usePlayerStore.getState().queue.map(titleById);
+    expect(queue.slice(0, 2)).toEqual(['Walk This Way', 'Sweet Emotion']);
+    expect(queue).toHaveLength(10);
+  });
+
   it('space toggles playback outside inputs', () => {
     renderApp();
     fireEvent.doubleClick(rows()[0]!);
