@@ -194,16 +194,17 @@ Layout uses CSS grid: the top bar has a fixed height, and below it the sidebar h
 - An unplayable track is skipped, but after 3 failures in a row playback stops with the error (a server outage must not run through the whole queue).
 - Seeks stop 0.25 s before the end, so a paused track seeked to its end moves on instead of restarting.
 - Media Session API: OS media keys and lock-screen controls.
+- A page reload necessarily stops the audio. If a track was playing less than 60 s before the page loads, playback resumes at the saved position; when the browser's autoplay policy refuses, the bar asks for a click and the next click or key press anywhere resumes.
 - Keyboard: Space toggles play/pause, Ctrl+← / Ctrl+→ go to previous / next.
 
 ### 7.2 Sidebar (left)
 Items, from top to bottom:
 1. **Currently playing.** Always first and fixed. It is the play queue. Selecting it shows the queue in the table, with the current track highlighted.
 2. **Filter results.** Fixed. It is the virtual list produced by the current filters minus exclusions. Selecting it shows the filter panel and the filtered table.
-3. **Custom playlists.** Stored in Navidrome. They can be **reordered with drag & drop** (dnd-kit sortable), and the order is saved through `/api/playlists/order`. Each one offers rename and delete in a context menu.
+3. **Custom playlists.** Stored in Navidrome. They can be **reordered with drag & drop** (dnd-kit sortable), and the order is saved through `/api/playlists/order`. Double-click plays a playlist; rename and delete are in the context menu.
 
 Drop targets for tracks dragged from the table:
-- The **empty area / "new playlist" zone** creates a new playlist. It is created immediately with an inline-editable default name ("New playlist").
+- The **"new playlist" zone**, shown between the Playlists header and the list (only the list scrolls, so it stays in view), creates a new playlist. It is created immediately with an inline-editable default name ("New playlist").
 - An **existing playlist**: the tracks are appended to it.
 - **Currently playing**: the tracks are added to the end of the queue.
 
@@ -212,7 +213,7 @@ The **filter boxes are always visible**, whichever sidebar item is selected. Whe
 ### 7.3 Filters (right, upper part)
 Four boxes in a row: **Music Folder → Genre → Artist → Album**.
 - The **Artist** box uses the **album artist** (`albumArtist` from §5), not the track artist. A compilation therefore appears under its album artist (for example "Various Artists"), and a "feat." track appears under the main album's artist.
-- Each box is a **multi-select list** (MUI `List` with checkboxes, virtualized for long lists). Each box has a small search field, a "clear" action and a count per item.
+- Each box is a **multi-select list** (virtualized for long lists) that selects like a desktop list: a click selects one value, Ctrl/Cmd-click toggles, Shift-click selects a range. Each box has a small search field, a "clear" action, an "All" entry and a count per item.
 - **Nothing selected = everything selected** for that level.
 - **Genres:** a track can have several genres. It matches the Genre box if **any** of its genres is selected.
 - **Cascade (options):** each box only lists values present in the tracks that match all **previous** boxes.

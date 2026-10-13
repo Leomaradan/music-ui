@@ -32,6 +32,11 @@ interface PlayerState {
   duration: number;
   volume: number;
   error: string | null;
+  /**
+   * The browser blocked playback (autoplay policy, e.g. resuming after a page reload):
+   * the next click or key press anywhere resumes it (see PlayerHost).
+   */
+  resumePending: boolean;
 
   /** Replaces the queue and starts playing at `startIndex`. */
   playQueue(trackIds: string[], startIndex: number): void;
@@ -58,7 +63,11 @@ interface PlayerState {
   reportTime(position: number, duration: number): void;
   reportEnded(): void;
   reportError(message: string): void;
+  reportBlocked(): void;
 }
+
+export const BLOCKED_MESSAGE =
+  'The browser blocked playback: click anywhere or press a key to resume.';
 
 let engine: PlayerEngine | null = null;
 
@@ -94,6 +103,7 @@ export const usePlayerStore = create<PlayerState>()((set, get) => {
     duration: 0,
     volume: 1,
     error: null,
+    resumePending: false,
 
     playQueue(trackIds, startIndex) {
       set({ queue: [...trackIds] });
@@ -108,6 +118,7 @@ export const usePlayerStore = create<PlayerState>()((set, get) => {
         position: 0,
         duration: 0,
         error: null,
+        resumePending: false,
         status: autoplay ? 'loading' : 'stopped',
       });
       if (autoplay) engine?.play(id, 0);
@@ -139,12 +150,13 @@ export const usePlayerStore = create<PlayerState>()((set, get) => {
       const { queue, index, position } = get();
       if (queue.length === 0) return;
       if (index < 0) return get().playIndex(0);
-      set({ status: 'loading', error: null });
+      set({ status: 'loading', error: null, resumePending: false });
       engine?.play(queue[index]!, position);
     },
 
     pause() {
       engine?.pause();
+      set({ resumePending: false });
       if (get().status !== 'stopped') set({ status: 'paused' });
     },
 
@@ -155,7 +167,7 @@ export const usePlayerStore = create<PlayerState>()((set, get) => {
 
     stop() {
       engine?.stop();
-      set({ status: 'stopped', position: 0 });
+      set({ status: 'stopped', position: 0, resumePending: false });
     },
 
     next() {
@@ -206,6 +218,10 @@ export const usePlayerStore = create<PlayerState>()((set, get) => {
 
     reportTime(position, duration) {
       set({ position, duration: Number.isFinite(duration) ? duration : 0 });
+    },
+
+    reportBlocked() {
+      set({ status: 'paused', resumePending: true, error: BLOCKED_MESSAGE });
     },
 
     reportEnded() {

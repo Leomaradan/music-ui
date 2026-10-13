@@ -43,8 +43,19 @@ const optionNames = (name: string) =>
   within(box(name))
     .getAllByRole('option')
     .map((option) => option.textContent);
-const pick = (boxName: string, label: string) =>
-  fireEvent.click(within(box(boxName)).getByRole('option', { name: new RegExp(`^${label}`) }));
+const pick = (
+  boxName: string,
+  label: string,
+  modifiers: { ctrlKey?: boolean; shiftKey?: boolean } = {},
+) =>
+  fireEvent.click(
+    within(box(boxName)).getByRole('option', { name: new RegExp(`^${label}`) }),
+    modifiers,
+  );
+const selectedIn = (boxName: string) =>
+  within(box(boxName))
+    .getAllByRole('option', { selected: true })
+    .map((option) => option.textContent);
 const grid = () => screen.getByRole('grid', { name: 'Tracks' });
 const titles = () =>
   within(grid())
@@ -82,15 +93,34 @@ describe('library view', () => {
     pick('Album', 'Pump');
     expect(titles()).toEqual(['Love in an Elevator']);
 
-    // Changing a parent box clears the boxes after it.
+    // Changing a parent box clears the boxes after it. A plain click replaces the selection.
     pick('Genre', 'Jazz');
-    expect(within(box('Artist')).getByRole('option', { selected: true }).textContent).toBe('All6');
-    expect(within(box('Album')).getByRole('option', { selected: true }).textContent).toBe('All6');
-    expect(titles()).toHaveLength(6);
+    expect(selectedIn('Genre')).toEqual(['Jazz2']);
+    expect(selectedIn('Artist')).toEqual(['All2']);
+    expect(selectedIn('Album')).toEqual(['All2']);
+    expect(titles()).toHaveLength(2);
 
     // "All" clears a box.
     pick('Genre', 'All');
     expect(titles()).toHaveLength(10);
+  });
+
+  it('selects like a list: click replaces, Ctrl/Cmd toggles, Shift selects a range', () => {
+    renderApp();
+    pick('Genre', 'Dance');
+    pick('Genre', 'Pop');
+    expect(selectedIn('Genre')).toEqual(['Pop4']);
+
+    pick('Genre', 'Rock', { ctrlKey: true });
+    expect(selectedIn('Genre')).toEqual(['Pop4', 'Rock4']);
+    pick('Genre', 'Pop', { ctrlKey: true });
+    expect(selectedIn('Genre')).toEqual(['Rock4']);
+
+    pick('Genre', 'Dance');
+    pick('Genre', 'Pop', { shiftKey: true });
+    expect(selectedIn('Genre')).toEqual(['Dance2', 'Jazz2', 'Pop4']);
+    expect(useFilterStore.getState().filters.genres).toEqual(['Dance', 'Jazz', 'Pop']);
+    expect(titles()).toHaveLength(6);
   });
 
   it('searches inside a box', () => {

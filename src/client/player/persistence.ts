@@ -9,12 +9,18 @@ export const MAX_SERVER_QUEUE = 5_000;
 const SERVER_DEBOUNCE_MS = 2_000;
 const POSITION_SAVE_MS = 30_000;
 const LOCAL_POSITION_SAVE_MS = 5_000;
+/** Playback resumes on load only if it was playing this recently (a reload, not a new day). */
+export const RESUME_WINDOW_MS = 60_000;
 
 interface Saved {
   queue: string[];
   index: number;
   position: number;
   volume: number;
+  /** A track was playing when this was saved. */
+  playing: boolean;
+  /** Epoch ms of the save. */
+  savedAt: number;
 }
 
 function readLocal(): Saved | null {
@@ -28,6 +34,8 @@ function readLocal(): Saved | null {
       index: typeof saved.index === 'number' ? saved.index : -1,
       position: typeof saved.position === 'number' ? saved.position : 0,
       volume: typeof saved.volume === 'number' ? saved.volume : 1,
+      playing: saved.playing === true,
+      savedAt: typeof saved.savedAt === 'number' ? saved.savedAt : 0,
     };
   } catch {
     return null;
@@ -35,9 +43,17 @@ function readLocal(): Saved | null {
 }
 
 function writeLocal(): void {
-  const { queue, index, position, volume } = usePlayerStore.getState();
+  const { queue, index, position, volume, status } = usePlayerStore.getState();
+  const saved: Saved = {
+    queue,
+    index,
+    position,
+    volume,
+    playing: status === 'playing' || status === 'loading',
+    savedAt: Date.now(),
+  };
   try {
-    window.localStorage.setItem(LOCAL_KEY, JSON.stringify({ queue, index, position, volume }));
+    window.localStorage.setItem(LOCAL_KEY, JSON.stringify(saved));
   } catch {
     // Storage full or blocked: the server copy still works.
   }
@@ -65,15 +81,26 @@ function onHide(): void {
   }
 }
 
+/** The page is going away (reload, navigation, tab closed): save the exact position. */
+function onPageHide(): void {
+  writeLocal();
+}
+
 /**
  * Keeps "Currently playing" across reloads (PLAN.md §7.5): restores it from this browser,
- * or from the account's play queue on Navidrome when this browser has none; then saves
- * changes locally at once and to Navidrome debounced (and every 30 s while playing).
+ * or from the account's play queue on Navidrome when this browser has none, and resumes
+ * playback if it was playing right before a reload; then saves changes locally at once and
+ * to Navidrome debounced (and every 30 s while playing).
  */
 export function startQueuePersistence(): () => void {
   const local = readLocal();
   if (local) {
     usePlayerStore.getState().restore(local);
+    // It was playing just before the page reloaded: carry on (the browser may require a
+    // click first, see PlayerHost).
+    if (local.playing && local.index >= 0 && Date.now() - local.savedAt < RESUME_WINDOW_MS) {
+      usePlayerStore.getState().play();
+    }
   } else {
     void fetch('/api/queue', { cache: 'no-store' })
       .then((response) => (response.ok ? response.json() : null))
@@ -107,6 +134,7 @@ export function startQueuePersistence(): () => void {
     if (usePlayerStore.getState().status === 'playing') void saveToServer();
   }, POSITION_SAVE_MS);
   document.addEventListener('visibilitychange', onHide);
+  window.addEventListener('pagehide', onPageHide);
 
   return () => {
     unsubscribe();
@@ -114,5 +142,6 @@ export function startQueuePersistence(): () => void {
     clearInterval(localTimer);
     clearInterval(remoteTimer);
     document.removeEventListener('visibilitychange', onHide);
+    window.removeEventListener('pagehide', onPageHide);
   };
 }

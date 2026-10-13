@@ -1,4 +1,5 @@
 import {
+  BLOCKED_MESSAGE,
   attachEngine,
   selectCurrentTrackId,
   usePlayerStore,
@@ -177,6 +178,21 @@ describe('playerStore', () => {
     expect(calls.at(-1)).toBe('play b@33');
     player().restore({ queue: ['a'], index: 5, position: 3 });
     expect(player()).toMatchObject({ index: -1, position: 0 });
+  });
+
+  it('waits for an interaction when the browser blocks playback', () => {
+    player().playQueue(['a', 'b'], 0);
+    player().reportBlocked();
+    expect(player()).toMatchObject({
+      status: 'paused',
+      resumePending: true,
+      error: BLOCKED_MESSAGE,
+    });
+    player().play();
+    expect(player()).toMatchObject({ status: 'loading', resumePending: false, error: null });
+    player().reportBlocked();
+    player().stop();
+    expect(player().resumePending).toBe(false);
   });
 
   it('clamps the volume and applies it to the engine', () => {

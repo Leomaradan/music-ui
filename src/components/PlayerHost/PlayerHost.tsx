@@ -22,13 +22,16 @@ export default function PlayerHost() {
       time: (position, duration) => usePlayerStore.getState().reportTime(position, duration),
       ended: () => usePlayerStore.getState().reportEnded(),
       error: (message) => usePlayerStore.getState().reportError(message),
+      blocked: () => usePlayerStore.getState().reportBlocked(),
     });
     const detach = attachEngine(engine);
     const stopPersistence = startQueuePersistence();
     const stopMediaSession = startMediaSession();
     const stopShortcuts = startShortcuts();
     const stopTitle = startDocumentTitle();
+    const stopResume = startResumeOnInteraction();
     return () => {
+      stopResume();
       stopTitle();
       stopShortcuts();
       stopMediaSession();
@@ -173,5 +176,36 @@ function startDocumentTitle(): () => void {
     unsubscribePlayer();
     unsubscribeCatalog();
     document.title = APP_TITLE;
+  };
+}
+
+/**
+ * When the browser blocked playback (typically the automatic resume after a page reload),
+ * the next click or key press anywhere resumes it. Listeners run after the page's own
+ * handlers (bubble phase on window): a click on Play or Space already resumed, a click on
+ * Stop cancelled, and both cleared `resumePending`.
+ */
+function resumeIfPending(): void {
+  if (player().resumePending) player().play();
+}
+
+function syncResumeListeners(): void {
+  window.removeEventListener('click', resumeIfPending);
+  window.removeEventListener('keydown', resumeIfPending);
+  if (player().resumePending) {
+    window.addEventListener('click', resumeIfPending);
+    window.addEventListener('keydown', resumeIfPending);
+  }
+}
+
+function startResumeOnInteraction(): () => void {
+  syncResumeListeners();
+  const unsubscribe = usePlayerStore.subscribe((state, previous) => {
+    if (state.resumePending !== previous.resumePending) syncResumeListeners();
+  });
+  return () => {
+    unsubscribe();
+    window.removeEventListener('click', resumeIfPending);
+    window.removeEventListener('keydown', resumeIfPending);
   };
 }

@@ -5,6 +5,8 @@ export interface EngineReporter {
   time(position: number, duration: number): void;
   ended(): void;
   error(message: string): void;
+  /** The browser refused to start playback without a user gesture (autoplay policy). */
+  blocked(): void;
 }
 
 export const streamUrl = (trackId: string) => `/api/stream/${encodeURIComponent(trackId)}`;
@@ -55,10 +57,10 @@ export class AudioEngine implements PlayerEngine {
       if (request !== this.playRequest) return;
       const name = error instanceof Error ? error.name : '';
       if (name === 'AbortError') return; // Superseded by another load.
-      this.reporter.status('paused');
       if (name === 'NotAllowedError') {
-        this.reporter.error('The browser blocked playback: press play to start.');
+        this.reporter.blocked();
       } else {
+        this.reporter.status('paused');
         this.reporter.error(error instanceof Error ? error.message : 'Playback failed');
       }
     });

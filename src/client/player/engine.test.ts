@@ -49,6 +49,7 @@ function setup() {
     time: (position, duration) => reports.push(`time ${position}/${duration}`),
     ended: () => reports.push('ended'),
     error: (message) => reports.push(`error ${message}`),
+    blocked: () => reports.push('blocked'),
   };
   const engine = new AudioEngine(reporter, () => {
     const element = new FakeAudio();
@@ -138,8 +139,8 @@ describe('AudioEngine', () => {
     const { engine, reports, a } = setup();
     a.playResult = Promise.reject(Object.assign(new Error('blocked'), { name: 'NotAllowedError' }));
     engine.play('t1');
-    await vi.waitFor(() => expect(reports).toContain('status paused'));
-    expect(reports).toContain('error The browser blocked playback: press play to start.');
+    await vi.waitFor(() => expect(reports).toContain('blocked'));
+    expect(reports.filter((r) => r.startsWith('error'))).toEqual([]);
   });
 
   it('ignores a late rejection of an older play request', async () => {

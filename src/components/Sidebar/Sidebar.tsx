@@ -63,8 +63,9 @@ type DropKey = 'queue' | 'new' | `playlist:${string}`;
 
 /**
  * Sidebar (PLAN.md §7.2): Currently playing, Filter results, then the custom playlists, which
- * can be reordered by drag and drop. Tracks dragged from the table can be dropped on the
- * queue (appended), on a playlist (appended), or below the list (new playlist).
+ * can be reordered by drag and drop (double-click plays one; rename from the context menu).
+ * Tracks dragged from the table can be dropped on the queue (appended), on a playlist
+ * (appended), or on the zone above the playlists (new playlist).
  */
 export default function Sidebar() {
   const activeView = useViewStore((state) => state.activeView);
@@ -128,7 +129,7 @@ export default function Sidebar() {
   const menuPlaylist = playlists.find((p) => p.id === menu?.id);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <List dense disablePadding>
         <DropHighlight active={dropTarget === 'queue'}>
           <ListItemButton
@@ -171,55 +172,61 @@ export default function Sidebar() {
         </Tooltip>
       </ListSubheader>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        modifiers={[restrictToVerticalAxis]}
-        onDragEnd={onSortEnd}
-      >
-        <SortableContext items={playlists.map((p) => p.id)} strategy={verticalListSortingStrategy}>
-          <List dense disablePadding aria-label="Playlists">
-            {playlists.map((playlist) => (
-              <SortablePlaylist
-                key={playlist.id}
-                playlist={playlist}
-                selected={activeView === viewOfPlaylist(playlist.id)}
-                dropActive={dropTarget === viewOfPlaylist(playlist.id)}
-                dropProps={dropTargetProps(
-                  viewOfPlaylist(playlist.id) as DropKey,
-                  !playlist.readonly,
-                )}
-                onOpen={() => show(viewOfPlaylist(playlist.id))}
-                onContextMenu={(event) => {
-                  event.preventDefault();
-                  setMenu({ top: event.clientY, left: event.clientX, id: playlist.id });
-                }}
-              />
-            ))}
-          </List>
-        </SortableContext>
-      </DndContext>
-
       <Box
         role="region"
         aria-label="New playlist drop zone"
         {...dropTargetProps('new', true)}
         sx={{
-          flex: 1,
-          minHeight: 64,
-          m: 1,
-          p: 1.5,
+          flex: 'none',
+          mx: 1,
+          mb: 1,
+          px: 1.5,
+          py: 1,
           borderRadius: 1,
           border: 1,
           borderStyle: 'dashed',
           borderColor: dropTarget === 'new' ? 'primary.main' : 'divider',
           bgcolor: dropTarget === 'new' ? 'action.hover' : 'transparent',
           color: 'text.secondary',
-          typography: 'body2',
+          typography: 'caption',
           textAlign: 'center',
         }}
       >
         Drop tracks here to create a playlist
+      </Box>
+      {/* Only the playlists scroll: the entries above and the drop zone stay in view. */}
+      <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          modifiers={[restrictToVerticalAxis]}
+          onDragEnd={onSortEnd}
+        >
+          <SortableContext
+            items={playlists.map((p) => p.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <List dense disablePadding aria-label="Playlists">
+              {playlists.map((playlist) => (
+                <SortablePlaylist
+                  key={playlist.id}
+                  playlist={playlist}
+                  selected={activeView === viewOfPlaylist(playlist.id)}
+                  dropActive={dropTarget === viewOfPlaylist(playlist.id)}
+                  dropProps={dropTargetProps(
+                    viewOfPlaylist(playlist.id) as DropKey,
+                    !playlist.readonly,
+                  )}
+                  onOpen={() => show(viewOfPlaylist(playlist.id))}
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    setMenu({ top: event.clientY, left: event.clientX, id: playlist.id });
+                  }}
+                />
+              ))}
+            </List>
+          </SortableContext>
+        </DndContext>
       </Box>
 
       <Menu
@@ -332,9 +339,7 @@ function SortablePlaylist({
         <ListItemButton
           selected={selected}
           onClick={onOpen}
-          onDoubleClick={() =>
-            !playlist.readonly && usePlaylistStore.getState().setRenaming(playlist.id)
-          }
+          onDoubleClick={() => void usePlaylistStore.getState().play(playlist.id)}
           onContextMenu={onContextMenu}
           {...attributes}
           {...listeners}

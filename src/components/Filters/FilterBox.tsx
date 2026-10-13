@@ -1,9 +1,8 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, type MouseEvent } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import Box from '@mui/material/Box';
-import Checkbox from '@mui/material/Checkbox';
 import IconButton from '@mui/material/IconButton';
 import InputBase from '@mui/material/InputBase';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -14,6 +13,7 @@ import ClearIcon from '@mui/icons-material/FilterListOff';
 import SearchIcon from '@mui/icons-material/Search';
 import type { FacetOption, FilterLevel, Filters } from '@/client/catalog/facets';
 import { formatCount } from '@/client/format';
+import { clickSelection } from '@/client/selection';
 import { useFilterStore } from '@/client/stores/filterStore';
 
 const ROW_HEIGHT = 30;
@@ -33,7 +33,11 @@ const normalize = (text: string) =>
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase();
 
-/** One multi-select box of the cascading filters (PLAN.md §7.3). Nothing selected = all. */
+/**
+ * One multi-select box of the cascading filters (PLAN.md §7.3). Nothing selected = all.
+ * Selection works like a desktop list: click selects one value, Ctrl/Cmd-click toggles,
+ * Shift-click selects a range (in the order shown).
+ */
 export default function FilterBox<L extends FilterLevel>({
   level,
   title,
@@ -41,12 +45,14 @@ export default function FilterBox<L extends FilterLevel>({
   selected,
   total,
 }: FilterBoxProps<L>) {
-  const toggle = useFilterStore((state) => state.toggle);
   const setLevel = useFilterStore((state) => state.setLevel);
   const [query, setQuery] = useState('');
+  /** Fixed end of Shift ranges: the last value clicked without Shift. */
+  const [anchor, setAnchor] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const selectedSet = useMemo(() => new Set<string | number>(selected), [selected]);
+  const selectedKeys = useMemo(() => new Set(selected.map(String)), [selected]);
   const visible = useMemo(() => {
     const q = normalize(query.trim());
     if (!q) return options;
@@ -65,7 +71,23 @@ export default function FilterBox<L extends FilterLevel>({
     overscan: 10,
   });
 
-  const clear = () => setLevel(level, [] as unknown as Filters[L]);
+  const clear = () => {
+    setAnchor(null);
+    setLevel(level, [] as unknown as Filters[L]);
+  };
+
+  const select = (event: MouseEvent, option: FacetOption<Filters[L][number]>) => {
+    const next = clickSelection(
+      { ids: selectedKeys, anchor },
+      visible.map((o) => String(o.value)),
+      String(option.value),
+      { range: event.shiftKey, toggle: event.ctrlKey || event.metaKey },
+    );
+    setAnchor(next.anchor);
+    // Keep the box's order; values hidden by the search stay selected only with Ctrl.
+    const values = options.filter((o) => next.ids.has(String(o.value))).map((o) => o.value);
+    setLevel(level, values as Filters[L]);
+  };
 
   return (
     <Paper
@@ -141,7 +163,8 @@ export default function FilterBox<L extends FilterLevel>({
                 role="option"
                 aria-selected={isSelected}
                 dense
-                onClick={() => (isAll ? clear() : toggle(level, option!.value))}
+                selected={isSelected}
+                onClick={(event) => (isAll ? clear() : select(event, option!))}
                 sx={{
                   position: 'absolute',
                   top: 0,
@@ -149,18 +172,11 @@ export default function FilterBox<L extends FilterLevel>({
                   width: '100%',
                   height: ROW_HEIGHT,
                   transform: `translateY(${item.start}px)`,
-                  px: 0.5,
+                  px: 1.5,
                   gap: 0.5,
+                  userSelect: 'none',
                 }}
               >
-                <Checkbox
-                  size="small"
-                  checked={isSelected}
-                  tabIndex={-1}
-                  disableRipple
-                  sx={{ p: 0.5 }}
-                  slotProps={{ input: { 'aria-hidden': true } }}
-                />
                 <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'baseline', gap: 1 }}>
                   <Typography variant="body2" noWrap sx={{ fontWeight: isAll ? 500 : undefined }}>
                     {label}

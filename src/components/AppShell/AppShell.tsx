@@ -35,7 +35,7 @@ export default function AppShell() {
       </Box>
       <Box
         component="nav"
-        sx={{ gridArea: 'sidebar', borderRight: 1, borderColor: 'divider', overflowY: 'auto' }}
+        sx={{ gridArea: 'sidebar', borderRight: 1, borderColor: 'divider', minHeight: 0 }}
       >
         <Sidebar />
       </Box>

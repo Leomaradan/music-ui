@@ -115,6 +115,23 @@ describe('player', () => {
     expect(useFilterStore.getState().excluded).toEqual([]);
   });
 
+  it('resumes on the next click when the browser blocked playback', () => {
+    renderApp();
+    fireEvent.doubleClick(rows()[0]!);
+    act(() => usePlayerStore.getState().reportBlocked());
+    expect(within(bar()).getByText(/click anywhere or press a key to resume/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('main'));
+    expect(usePlayerStore.getState()).toMatchObject({ status: 'loading', resumePending: false });
+  });
+
+  it('a click on Stop cancels the pending resume', () => {
+    renderApp();
+    fireEvent.doubleClick(rows()[0]!);
+    act(() => usePlayerStore.getState().reportBlocked());
+    fireEvent.click(within(bar()).getByRole('button', { name: 'Stop' }));
+    expect(usePlayerStore.getState()).toMatchObject({ status: 'stopped', resumePending: false });
+  });
+
   it('space toggles playback outside inputs', () => {
     renderApp();
     fireEvent.doubleClick(rows()[0]!);

@@ -246,6 +246,38 @@ describe('playlists', () => {
     expect(requests.some((r) => r.method === 'DELETE' && r.url === '/api/playlists/p1')).toBe(true);
   });
 
+  it('shows the drop zone above the playlists', async () => {
+    await renderApp();
+    const zone = screen.getByRole('region', { name: 'New playlist drop zone' });
+    const list = screen.getByRole('list', { name: 'Playlists' });
+    expect(zone.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('double-click plays a playlist (rename is in the context menu)', async () => {
+    await renderApp();
+    fireEvent.doubleClick(playlistButton(/Road trip/));
+    await waitFor(() =>
+      expect(usePlayerStore.getState().queue.map(titleById)).toEqual([
+        'Dancing Queen',
+        'Knowing Me, Knowing You',
+      ]),
+    );
+    expect(usePlayerStore.getState()).toMatchObject({ index: 0, status: 'loading' });
+    expect(screen.queryByRole('textbox', { name: 'Playlist name' })).toBeNull();
+
+    fireEvent.contextMenu(playlistButton(/Road trip/));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }));
+    expect(await screen.findByRole('textbox', { name: 'Playlist name' })).toHaveValue('Road trip');
+  });
+
+  it('tells when a double-clicked playlist is empty', async () => {
+    server.tracks.p1 = [];
+    await renderApp();
+    fireEvent.doubleClick(playlistButton(/Road trip/));
+    expect(await screen.findByText('"Road trip" is empty')).toBeInTheDocument();
+    expect(usePlayerStore.getState().queue).toEqual([]);
+  });
+
   it('creates an empty playlist with the + button', async () => {
     await renderApp();
     fireEvent.click(screen.getByRole('button', { name: 'New playlist' }));

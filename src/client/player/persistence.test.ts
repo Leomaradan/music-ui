@@ -1,5 +1,5 @@
 import { usePlayerStore } from '@/client/stores/playerStore';
-import { MAX_SERVER_QUEUE, startQueuePersistence } from './persistence';
+import { MAX_SERVER_QUEUE, RESUME_WINDOW_MS, startQueuePersistence } from './persistence';
 
 const initial = usePlayerStore.getState();
 let stop: () => void = () => {};
@@ -47,6 +47,52 @@ describe('queue persistence', () => {
       status: 'stopped',
     });
     expect(requests).toEqual([]);
+  });
+
+  it('resumes playback when it was playing right before a reload', () => {
+    mockServer();
+    vi.setSystemTime(new Date('2026-10-13T10:00:00Z'));
+    localStorage.setItem(
+      'music-ui:player',
+      JSON.stringify({
+        queue: ['a', 'b'],
+        index: 1,
+        position: 42,
+        volume: 1,
+        playing: true,
+        savedAt: Date.now() - 2_000,
+      }),
+    );
+    stop = startQueuePersistence();
+    expect(usePlayerStore.getState()).toMatchObject({ index: 1, position: 42, status: 'loading' });
+  });
+
+  it.each([
+    ['it was paused', { playing: false, savedAt: 0 }],
+    ['the save is old (not a reload)', { playing: true, savedAt: -RESUME_WINDOW_MS - 1 }],
+  ])('does not resume when %s', (_label, { playing, savedAt }) => {
+    mockServer();
+    localStorage.setItem(
+      'music-ui:player',
+      JSON.stringify({
+        queue: ['a'],
+        index: 0,
+        position: 3,
+        volume: 1,
+        playing,
+        savedAt: Date.now() + savedAt,
+      }),
+    );
+    stop = startQueuePersistence();
+    expect(usePlayerStore.getState().status).toBe('stopped');
+  });
+
+  it('records whether it was playing when the page goes away', () => {
+    mockServer();
+    stop = startQueuePersistence();
+    usePlayerStore.setState({ queue: ['a'], index: 0, position: 17, status: 'playing' });
+    window.dispatchEvent(new Event('pagehide'));
+    expect(local()).toMatchObject({ position: 17, playing: true, savedAt: Date.now() });
   });
 
   it("falls back to the account's queue on the server", async () => {

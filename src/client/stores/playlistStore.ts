@@ -5,6 +5,7 @@ import { create } from 'zustand';
 import { api } from '@/client/api';
 import type { PlaylistDetail, PlaylistSummary } from '@/lib/playlists/types';
 import { notify } from './notificationStore';
+import { usePlayerStore } from './playerStore';
 import { useViewStore, viewOfPlaylist } from './viewStore';
 
 interface PlaylistState {
@@ -17,6 +18,8 @@ interface PlaylistState {
 
   load(): Promise<void>;
   loadTracks(id: string): Promise<void>;
+  /** Plays the playlist from its first track (it becomes "Currently playing"). */
+  play(id: string): Promise<void>;
   /** Creates a playlist (a free "New playlist N" name by default) and opens its rename field. */
   create(trackIds?: string[], name?: string): Promise<PlaylistSummary | null>;
   append(id: string, trackIds: string[]): Promise<void>;
@@ -75,6 +78,18 @@ export const usePlaylistStore = create<PlaylistState>()((set, get) => {
       } catch (error) {
         notify(`Could not load the playlist: ${errorMessage(error)}`, 'error');
       }
+    },
+
+    async play(id) {
+      if (!get().tracks[id]) await get().loadTracks(id);
+      const trackIds = get().tracks[id];
+      if (!trackIds) return;
+      if (trackIds.length === 0) {
+        const name = get().playlists.find((p) => p.id === id)?.name ?? 'This playlist';
+        notify(`"${name}" is empty`, 'info');
+        return;
+      }
+      usePlayerStore.getState().playQueue(trackIds, 0);
     },
 
     async create(trackIds = [], name) {
