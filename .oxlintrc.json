@@ -44,5 +44,12 @@
       }
     }
   ],
-  "ignorePatterns": [".next/**", "out/**", "coverage/**", "next-env.d.ts", "docker/music/**"]
+  "ignorePatterns": [
+    ".next/**",
+    "out/**",
+    "coverage/**",
+    "storybook-static/**",
+    "next-env.d.ts",
+    "docker/music/**"
+  ]
 }

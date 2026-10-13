@@ -58,8 +58,52 @@ pnpm test:integration                             # runs against http://localhos
 | `pnpm lint`                         | oxlint (TypeScript, React hooks, Next.js, a11y rules; warnings fail) |
 | `pnpm typecheck`                    | `tsc --noEmit`                                                       |
 | `pnpm format` / `pnpm format:check` | oxfmt                                                                |
-| `pnpm test`                         | Vitest unit tests (integration tests are skipped without a server)   |
+| `pnpm test`                         | All Vitest projects: `unit` and `storybook` (below)                  |
+| `pnpm test:unit`                    | Unit and jsdom UI tests (integration tests skip without a server)    |
+| `pnpm test:storybook`               | Every story as a test in headless Chromium (play function + a11y)    |
 | `pnpm test:integration`             | Integration tests against the dev Navidrome                          |
+| `pnpm storybook`                    | Storybook on http://localhost:6006                                   |
+| `pnpm build-storybook`              | Static Storybook in `storybook-static/`                              |
+
+### Storybook and story tests
+
+Each component has stories next to it (`src/components/**/X.stories.tsx`). Stories run without a
+server:
+
+- `tests/helpers/fake-api.ts` answers the app's `/api` JSON routes in memory.
+- `.storybook/main.ts` serves `/api/stream` as silent audio (with byte ranges) and `/api/cover` as
+  coloured squares, so the player really plays, pauses and seeks.
+
+Before every story, `.storybook/preview.tsx` resets the stores, localStorage, the IndexedDB cache
+and the fake API (`resetApp` in `tests/helpers/stories.ts`). The library is the sample catalog in
+`tests/fixtures/catalog-snapshot.json`. A unit test keeps that file identical to what the sync
+produces; regenerate it with `pnpm test:unit tests/fixtures -u`.
+
+The [Vitest addon](https://storybook.js.org/docs/writing-tests/integrations/vitest-addon) turns
+every story into a test. It renders the story in Chromium and runs its `play` function, then runs
+the accessibility checks (`a11y.test: 'error'`: violations fail). To cover a new feature, write a
+story whose `play` function performs the interaction and asserts the result:
+
+```tsx
+export const ClickSelectsOne: Story = {
+  play: async ({ canvasElement, userEvent }) => {
+    await userEvent.click(option(canvasElement, 'Artist', 'ABBA'));
+    expect(useFilterStore.getState().filters.artists).toEqual(['ABBA']);
+  },
+};
+```
+
+- **Story options:**
+  - `parameters.fakeApi` sets what the fake API serves (playlists, saved queue, catalog).
+  - `parameters.catalog: 'loading'` leaves the library for `CatalogLoader` to load.
+  - `fakeApi().sent(method, url)` lists the requests the story made.
+- **Native drag and drop:** `userEvent` can't do it; use `dragAndDrop` / `fireDrag` from
+  `tests/helpers/dnd.ts`.
+- **Running the tests:**
+  - CI installs Chromium with `pnpm exec playwright install --with-deps chromium`.
+  - To use a Chromium that is already installed, set `CHROMIUM_EXECUTABLE_PATH`, e.g.
+    `CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium pnpm test:storybook`.
+  - The Storybook UI can also run them: the "Run tests" button in the sidebar.
 
 ## Deployment (Unraid)
 
@@ -96,3 +140,4 @@ Notes:
 - [x] M9 — Playlists: sidebar, drag tracks to create / append / queue, reorder, rename, delete
 - [x] M10 — Settings (library status, rescan, theme, layout reset, shortcuts), track in the tab title
 - [x] M4 — Docker image (`ghcr.io/leomaradan/music-ui`), Unraid template, CI
+- [x] M11 — Storybook with story tests (Vitest addon: play functions + a11y checks in Chromium)

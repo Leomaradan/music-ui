@@ -4,5 +4,13 @@
   "trailingComma": "all",
   "printWidth": 100,
   "sortPackageJson": false,
-  "ignorePatterns": [".next/", "node_modules/", "coverage/", "pnpm-lock.yaml", "PLAN.md"]
+  "ignorePatterns": [
+    ".next/",
+    "node_modules/",
+    "coverage/",
+    "pnpm-lock.yaml",
+    "PLAN.md",
+    "storybook-static/",
+    "tests/fixtures/catalog-snapshot.json"
+  ]
 }

@@ -17,9 +17,13 @@
     "format:check": "oxfmt --check",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:integration": "SUBSONIC_TEST_URL=${SUBSONIC_TEST_URL:-http://localhost:4533} vitest run tests/integration",
+    "test:integration": "SUBSONIC_TEST_URL=${SUBSONIC_TEST_URL:-http://localhost:4533} vitest run --project unit tests/integration",
     "navidrome:music": "sh scripts/generate-sample-music.sh",
-    "navidrome:setup": "node scripts/setup-dev-navidrome.mjs"
+    "navidrome:setup": "node scripts/setup-dev-navidrome.mjs",
+    "test:unit": "vitest run --project unit",
+    "test:storybook": "vitest run --project storybook",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -42,6 +46,10 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@storybook/addon-a11y": "^10.6.2",
+    "@storybook/addon-docs": "^10.6.2",
+    "@storybook/addon-vitest": "^10.6.2",
+    "@storybook/nextjs-vite": "^10.6.2",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
@@ -49,11 +57,15 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "@vitest/browser": "^5.0.4",
+    "@vitest/browser-playwright": "^5.0.4",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^30.1.2",
     "oxfmt": "^0.72.0",
     "oxlint": "^1.87.0",
+    "playwright": "^1.64.0",
+    "storybook": "^10.6.2",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.4"
   }
 }
