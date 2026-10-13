@@ -1,0 +1,83 @@
+{
+  "subsonic-response": {
+    "status": "ok",
+    "version": "1.16.1",
+    "type": "navidrome",
+    "serverVersion": "0.64.2 (10114574)",
+    "openSubsonic": true,
+    "albumList2": {
+      "album": [
+        {
+          "id": "2NfIfJ2FAXw0gWcQPGmTmU",
+          "name": "Live at the Plugged Nickel",
+          "artist": "Miles Davis",
+          "artistId": "5dJa2S23ao1lAQokLHKFPR",
+          "songCount": 2,
+          "duration": 16,
+          "created": "2026-10-12T07:21:20.297484125Z",
+          "year": 1965,
+          "genre": "Jazz",
+          "userRating": 0,
+          "genres": [
+            {
+              "name": "Jazz"
+            }
+          ],
+          "musicBrainzId": "",
+          "isCompilation": false,
+          "sortName": "live at the plugged nickel",
+          "discTitles": [],
+          "originalReleaseDate": {},
+          "releaseDate": {},
+          "releaseTypes": [],
+          "recordLabels": [],
+          "moods": [],
+          "artists": [
+            {
+              "id": "5dJa2S23ao1lAQokLHKFPR",
+              "name": "Miles Davis"
+            }
+          ],
+          "displayArtist": "Miles Davis",
+          "explicitStatus": "",
+          "version": ""
+        },
+        {
+          "id": "1Xo05zZEl1ynuTNV8Pu5ir",
+          "name": "Live! Bootleg",
+          "artist": "Aerosmith",
+          "artistId": "3IuN91bZn6R4OGPP2GYfdO",
+          "songCount": 1,
+          "duration": 8,
+          "created": "2026-10-12T07:21:20.133484115Z",
+          "year": 1978,
+          "genre": "Rock",
+          "userRating": 0,
+          "genres": [
+            {
+              "name": "Rock"
+            }
+          ],
+          "musicBrainzId": "",
+          "isCompilation": false,
+          "sortName": "live! bootleg",
+          "discTitles": [],
+          "originalReleaseDate": {},
+          "releaseDate": {},
+          "releaseTypes": [],
+          "recordLabels": [],
+          "moods": [],
+          "artists": [
+            {
+              "id": "3IuN91bZn6R4OGPP2GYfdO",
+              "name": "Aerosmith"
+            }
+          ],
+          "displayArtist": "Aerosmith",
+          "explicitStatus": "",
+          "version": ""
+        }
+      ]
+    }
+  }
+}

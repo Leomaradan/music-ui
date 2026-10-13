@@ -1,0 +1,184 @@
+{
+  "subsonic-response": {
+    "status": "ok",
+    "version": "1.16.1",
+    "type": "navidrome",
+    "serverVersion": "0.64.2 (10114574)",
+    "openSubsonic": true,
+    "searchResult3": {
+      "song": [
+        {
+          "id": "3dA6BaIww817x4UcCMkuMr",
+          "parent": "06DjnnRReUfc4YAHHhUHAG",
+          "isDir": false,
+          "title": "Sweet Emotion",
+          "album": "Toys in the Attic",
+          "artist": "Aerosmith",
+          "track": 2,
+          "year": 1975,
+          "genre": "Rock",
+          "size": 129334,
+          "contentType": "audio/mpeg",
+          "suffix": "mp3",
+          "duration": 8,
+          "bitRate": 128,
+          "path": "Aerosmith/Toys in the Attic/02 - Sweet Emotion.mp3",
+          "created": "2026-10-12T07:21:30.016279216Z",
+          "albumId": "06DjnnRReUfc4YAHHhUHAG",
+          "artistId": "3IuN91bZn6R4OGPP2GYfdO",
+          "type": "music",
+          "bpm": 0,
+          "comment": "",
+          "sortName": "sweet emotion",
+          "mediaType": "song",
+          "musicBrainzId": "",
+          "isrc": [],
+          "genres": [
+            {
+              "name": "Rock"
+            }
+          ],
+          "replayGain": {},
+          "channelCount": 2,
+          "samplingRate": 44100,
+          "bitDepth": 0,
+          "moods": [],
+          "artists": [
+            {
+              "id": "3IuN91bZn6R4OGPP2GYfdO",
+              "name": "Aerosmith"
+            }
+          ],
+          "displayArtist": "Aerosmith",
+          "albumArtists": [
+            {
+              "id": "3IuN91bZn6R4OGPP2GYfdO",
+              "name": "Aerosmith"
+            }
+          ],
+          "displayAlbumArtist": "Aerosmith",
+          "contributors": [],
+          "displayComposer": "",
+          "explicitStatus": "",
+          "groupings": [],
+          "works": [],
+          "movements": []
+        },
+        {
+          "id": "0RpYkEmcf0oGfkvjeuViGB",
+          "parent": "06DjnnRReUfc4YAHHhUHAG",
+          "isDir": false,
+          "title": "Walk This Way",
+          "album": "Toys in the Attic",
+          "artist": "Aerosmith",
+          "track": 1,
+          "year": 1975,
+          "genre": "Rock",
+          "size": 129334,
+          "contentType": "audio/mpeg",
+          "suffix": "mp3",
+          "duration": 8,
+          "bitRate": 128,
+          "path": "Aerosmith/Toys in the Attic/01 - Walk This Way.mp3",
+          "created": "2026-10-12T07:21:30.017349352Z",
+          "albumId": "06DjnnRReUfc4YAHHhUHAG",
+          "artistId": "3IuN91bZn6R4OGPP2GYfdO",
+          "type": "music",
+          "bpm": 0,
+          "comment": "",
+          "sortName": "walk this way",
+          "mediaType": "song",
+          "musicBrainzId": "",
+          "isrc": [],
+          "genres": [
+            {
+              "name": "Rock"
+            }
+          ],
+          "replayGain": {},
+          "channelCount": 2,
+          "samplingRate": 44100,
+          "bitDepth": 0,
+          "moods": [],
+          "artists": [
+            {
+              "id": "3IuN91bZn6R4OGPP2GYfdO",
+              "name": "Aerosmith"
+            }
+          ],
+          "displayArtist": "Aerosmith",
+          "albumArtists": [
+            {
+              "id": "3IuN91bZn6R4OGPP2GYfdO",
+              "name": "Aerosmith"
+            }
+          ],
+          "displayAlbumArtist": "Aerosmith",
+          "contributors": [],
+          "displayComposer": "",
+          "explicitStatus": "",
+          "groupings": [],
+          "works": [],
+          "movements": []
+        },
+        {
+          "id": "4pHW4DO4JxqIusp1l51xyp",
+          "parent": "3uZ2r1ByBF71qchXZm6oZG",
+          "isDir": false,
+          "title": "Love in an Elevator",
+          "album": "Pump",
+          "artist": "Aerosmith",
+          "track": 1,
+          "year": 1989,
+          "genre": "Rock",
+          "size": 129327,
+          "contentType": "audio/mpeg",
+          "suffix": "mp3",
+          "duration": 8,
+          "bitRate": 128,
+          "path": "Aerosmith/Pump/01 - Love in an Elevator.mp3",
+          "created": "2026-10-12T07:21:30.020781779Z",
+          "albumId": "3uZ2r1ByBF71qchXZm6oZG",
+          "artistId": "3IuN91bZn6R4OGPP2GYfdO",
+          "type": "music",
+          "bpm": 0,
+          "comment": "",
+          "sortName": "love in an elevator",
+          "mediaType": "song",
+          "musicBrainzId": "",
+          "isrc": [],
+          "genres": [
+            {
+              "name": "Rock"
+            }
+          ],
+          "replayGain": {},
+          "channelCount": 2,
+          "samplingRate": 44100,
+          "bitDepth": 0,
+          "moods": [],
+          "artists": [
+            {
+              "id": "3IuN91bZn6R4OGPP2GYfdO",
+              "name": "Aerosmith"
+            }
+          ],
+          "displayArtist": "Aerosmith",
+          "albumArtists": [
+            {
+              "id": "3IuN91bZn6R4OGPP2GYfdO",
+              "name": "Aerosmith"
+            }
+          ],
+          "displayAlbumArtist": "Aerosmith",
+          "contributors": [],
+          "displayComposer": "",
+          "explicitStatus": "",
+          "groupings": [],
+          "works": [],
+          "movements": []
+        }
+      ]
+    }
+  }
+}

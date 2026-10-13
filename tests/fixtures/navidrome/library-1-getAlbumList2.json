@@ -1,0 +1,156 @@
+{
+  "subsonic-response": {
+    "status": "ok",
+    "version": "1.16.1",
+    "type": "navidrome",
+    "serverVersion": "0.64.2 (10114574)",
+    "openSubsonic": true,
+    "albumList2": {
+      "album": [
+        {
+          "id": "5X9iupbHykcoxdksxvZ8To",
+          "name": "Arrival",
+          "artist": "ABBA",
+          "artistId": "4ByFDbM4ptBfCcuCLGd8eA",
+          "songCount": 2,
+          "duration": 16,
+          "created": "2026-10-12T07:21:19.517484078Z",
+          "year": 1976,
+          "genre": "Pop",
+          "userRating": 0,
+          "genres": [
+            {
+              "name": "Pop"
+            }
+          ],
+          "musicBrainzId": "",
+          "isCompilation": false,
+          "sortName": "arrival",
+          "discTitles": [],
+          "originalReleaseDate": {},
+          "releaseDate": {},
+          "releaseTypes": [],
+          "recordLabels": [],
+          "moods": [],
+          "artists": [
+            {
+              "id": "4ByFDbM4ptBfCcuCLGd8eA",
+              "name": "ABBA"
+            }
+          ],
+          "displayArtist": "ABBA",
+          "explicitStatus": "",
+          "version": ""
+        },
+        {
+          "id": "3uZ2r1ByBF71qchXZm6oZG",
+          "name": "Pump",
+          "artist": "Aerosmith",
+          "artistId": "3IuN91bZn6R4OGPP2GYfdO",
+          "songCount": 1,
+          "duration": 8,
+          "created": "2026-10-12T07:21:19.353484069Z",
+          "year": 1989,
+          "genre": "Rock",
+          "userRating": 0,
+          "genres": [
+            {
+              "name": "Rock"
+            }
+          ],
+          "musicBrainzId": "",
+          "isCompilation": false,
+          "sortName": "pump",
+          "discTitles": [],
+          "originalReleaseDate": {},
+          "releaseDate": {},
+          "releaseTypes": [],
+          "recordLabels": [],
+          "moods": [],
+          "artists": [
+            {
+              "id": "3IuN91bZn6R4OGPP2GYfdO",
+              "name": "Aerosmith"
+            }
+          ],
+          "displayArtist": "Aerosmith",
+          "explicitStatus": "",
+          "version": ""
+        },
+        {
+          "id": "2fqF38DPTuuDTcSA9PFpNT",
+          "name": "Summer Hits",
+          "artist": "Various Artists",
+          "artistId": "63sqASlAfjbGMuLP4JhnZU",
+          "songCount": 2,
+          "duration": 16,
+          "created": "2026-10-12T07:21:19.825484097Z",
+          "year": 2001,
+          "genre": "Pop",
+          "userRating": 0,
+          "genres": [
+            {
+              "name": "Pop"
+            },
+            {
+              "name": "Dance"
+            }
+          ],
+          "musicBrainzId": "",
+          "isCompilation": false,
+          "sortName": "summer hits",
+          "discTitles": [],
+          "originalReleaseDate": {},
+          "releaseDate": {},
+          "releaseTypes": [],
+          "recordLabels": [],
+          "moods": [],
+          "artists": [
+            {
+              "id": "63sqASlAfjbGMuLP4JhnZU",
+              "name": "Various Artists"
+            }
+          ],
+          "displayArtist": "Various Artists",
+          "explicitStatus": "",
+          "version": ""
+        },
+        {
+          "id": "06DjnnRReUfc4YAHHhUHAG",
+          "name": "Toys in the Attic",
+          "artist": "Aerosmith",
+          "artistId": "3IuN91bZn6R4OGPP2GYfdO",
+          "songCount": 2,
+          "duration": 16,
+          "created": "2026-10-12T07:21:19.03348405Z",
+          "year": 1975,
+          "genre": "Rock",
+          "userRating": 0,
+          "genres": [
+            {
+              "name": "Rock"
+            }
+          ],
+          "musicBrainzId": "",
+          "isCompilation": false,
+          "sortName": "toys in the attic",
+          "discTitles": [],
+          "originalReleaseDate": {},
+          "releaseDate": {},
+          "releaseTypes": [],
+          "recordLabels": [],
+          "moods": [],
+          "artists": [
+            {
+              "id": "3IuN91bZn6R4OGPP2GYfdO",
+              "name": "Aerosmith"
+            }
+          ],
+          "displayArtist": "Aerosmith",
+          "explicitStatus": "",
+          "version": ""
+        }
+      ]
+    }
+  }
+}

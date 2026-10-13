@@ -1,0 +1,24 @@
+# Example deployment (PLAN.md §10). On Unraid, the template in unraid/ is the easier route.
+#   SUBSONIC_PASSWORD=… docker compose up -d
+services:
+  music-ui:
+    image: ghcr.io/leomaradan/music-ui:latest
+    container_name: music-ui
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    volumes:
+      - /mnt/user/appdata/music-ui:/data
+    environment:
+      SUBSONIC_URL: http://navidrome:4533 # or http://<Unraid IP>:4533
+      SUBSONIC_USER: music
+      SUBSONIC_PASSWORD: ${SUBSONIC_PASSWORD:?set SUBSONIC_PASSWORD}
+      SYNC_INTERVAL_MINUTES: '15'
+    networks:
+      - music
+
+networks:
+  # Shared with the Navidrome container, so the app reaches it as http://navidrome:4533.
+  # Create it once: docker network create music
+  music:
+    external: true

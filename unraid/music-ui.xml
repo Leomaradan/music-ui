@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<!--
+  Unraid Docker template for Music UI.
+  Install: copy this file to /boot/config/plugins/dockerMan/templates-user/my-music-ui.xml,
+  then Docker → Add Container → Template: music-ui.
+-->
+<Container version="2">
+  <Name>music-ui</Name>
+  <Repository>ghcr.io/leomaradan/music-ui:latest</Repository>
+  <Registry>https://github.com/leomaradan/music-ui/pkgs/container/music-ui</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/leomaradan/music-ui/issues</Support>
+  <Project>https://github.com/leomaradan/music-ui</Project>
+  <Overview>Web music player for a Navidrome server: cascading filters (music folder, genre, artist, album), a fast track table, playlists with drag and drop, and a player. The app talks to Navidrome from the server side only, so Navidrome does not need to be exposed to the network.</Overview>
+  <Category>MediaServer:Music</Category>
+  <WebUI>http://[IP]:[PORT:3000]/</WebUI>
+  <TemplateURL/>
+  <Icon>https://raw.githubusercontent.com/leomaradan/music-ui/main/unraid/icon.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires>A Navidrome server (0.58 or later) reachable from this container, with one Navidrome library per music folder and a user that can access all of them. If Navidrome runs on this Unraid server, put both containers on the same custom Docker network and use http://navidrome:4533 (or use the server's IP and Navidrome's port).</Requires>
+  <Config Name="WebUI port" Target="3000" Default="3000" Mode="tcp" Description="Port of the web interface." Type="Port" Display="always" Required="true" Mask="false">3000</Config>
+  <Config Name="App data" Target="/data" Default="/mnt/user/appdata/music-ui" Mode="rw" Description="Library catalog and app settings (SQLite). Must be writable by nobody:users (99:100), the default owner of appdata." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/music-ui</Config>
+  <Config Name="Navidrome URL" Target="SUBSONIC_URL" Default="http://navidrome:4533" Mode="" Description="Navidrome address as seen from this container, e.g. http://navidrome:4533 (same Docker network) or http://192.168.1.10:4533." Type="Variable" Display="always" Required="true" Mask="false">http://navidrome:4533</Config>
+  <Config Name="Navidrome user" Target="SUBSONIC_USER" Default="" Mode="" Description="Navidrome account used by the app (a non-admin user with access to every library)." Type="Variable" Display="always" Required="true" Mask="false"/>
+  <Config Name="Navidrome password" Target="SUBSONIC_PASSWORD" Default="" Mode="" Description="Password of that account. Only used on the server; never sent to the browser." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="Sync interval (minutes)" Target="SYNC_INTERVAL_MINUTES" Default="15" Mode="" Description="How often to check Navidrome for library changes (0 = only at startup and on manual rescan)." Type="Variable" Display="advanced" Required="false" Mask="false">15</Config>
+  <Config Name="Log level" Target="LOG_LEVEL" Default="info" Mode="" Description="debug, info, warn or error." Type="Variable" Display="advanced" Required="false" Mask="false">info</Config>
+</Container>
