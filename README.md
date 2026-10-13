@@ -26,16 +26,16 @@ At startup, and then every `SYNC_INTERVAL_MINUTES`, the server copies the librar
 
 ### Using the library view
 
-- **Filters:** four boxes, Music Folder → Genre → Artist (album artist) → Album. Several values can be ticked in a box; nothing ticked means everything. Changing a box clears the boxes after it, and brings back tracks removed from the results.
+- **Filters:** four boxes, Music Folder → Genre → Artist (album artist) → Album. They select like a list: click selects one value, Ctrl/Cmd-click adds or removes one, Shift-click selects a range; _All_ (or nothing selected) means everything. Changing a box clears the boxes after it, and brings back tracks removed from the results.
 - **Table:** click a header to sort (ascending, descending, off), drag a header's right edge to resize (double-click resets).
 - **Selection:** click, Ctrl/Cmd-click, Shift-click, Ctrl/Cmd+A, arrow keys (Shift extends), Escape.
 - **Remove from results:** Delete / Backspace, or right-click → _Remove from results_. Hidden only; _Restore_ in the status bar brings them back.
 - **Play:** double-click a track (or select it and press Enter, or right-click → _Play_): the tracks listed in the table, in their displayed order, become "Currently playing" and playback starts at that track.
 - **Player bar:** previous (restarts the track after 3 s), play/pause, stop, next, seek slider, volume. Space toggles play/pause, Ctrl/Cmd + ←/→ previous/next; OS media keys work too.
 - **Currently playing:** the queue in play order. Double-click jumps to a track; Delete removes tracks from the queue.
-- **Playlists** (stored in Navidrome): drag tracks from the table (the selection, or the dragged row) onto the dashed zone to create a playlist, onto a playlist to append them, or onto _Currently playing_ to queue them. **+** creates an empty playlist. Drag playlists to reorder them (the order is kept by the app). Double-click or right-click → _Rename_; right-click → _Delete…_ (asks first). Open a playlist to see its tracks: Delete removes tracks from it, double-click plays it. Playlists you cannot change (owned by another user) show a lock.
+- **Playlists** (stored in Navidrome): drag tracks from the table (the selection, or the dragged row) onto the dashed zone (above the playlists) to create a playlist, onto a playlist to append them, or onto _Currently playing_ to queue them. **+** creates an empty playlist. Drag playlists to reorder them (the order is kept by the app). Double-click a playlist to play it; right-click → _Rename_ or _Delete…_ (asks first). Open a playlist to see its tracks: Delete removes tracks from it, double-click plays it. Playlists you cannot change (owned by another user) show a lock.
 - **Settings** (gear icon, top right): Navidrome connection and library sync status, _Rescan library_, theme (System / Light / Dark), reset of the table sort and column widths, and the list of keyboard shortcuts (also opened with `?`).
-- Filters, removed tracks, sort and column widths are remembered in the browser. The queue and position are remembered in the browser and saved to the Navidrome play queue (shared with other clients of the account). The catalog is cached in IndexedDB and revalidated every minute and when the tab becomes visible.
+- Filters, removed tracks, sort and column widths are remembered in the browser. The queue and position are remembered in the browser and saved to the Navidrome play queue (shared with other clients of the account). Reloading the page while playing resumes playback where it was; if the browser blocks it, click anywhere (or press a key) to resume. The catalog is cached in IndexedDB and revalidated every minute and when the tab becomes visible.
 
 ### Dev Navidrome
 
