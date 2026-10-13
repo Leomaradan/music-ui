@@ -52,7 +52,7 @@ describe('computeFacets', () => {
       'Pump',
       'Toys in the Attic',
     ]);
-    expect(rock.albums[1]).toMatchObject({ secondary: 'Aerosmith · 1989' });
+    expect(rock.albums[1]).toMatchObject({ label: 'Pump', secondary: '1989' });
   });
 
   it('shows all tracks of an artist until an album is selected', () => {

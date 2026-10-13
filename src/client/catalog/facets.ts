@@ -20,7 +20,7 @@ export const NONE = '';
 export interface FacetOption<V extends string | number = string | number> {
   value: V;
   label: string;
-  /** Extra line, e.g. album artist and year for albums. */
+  /** Extra text shown after the label, e.g. the year for albums. */
   secondary?: string;
   /** Tracks with this value among the tracks matching the previous levels. */
   count: number;
@@ -94,7 +94,7 @@ export function computeFacets(catalog: Catalog, filters: Filters): Facets {
   const albums = [...countValues('albums', level3)]
     .map(([value, count]) => {
       const info = catalog.albums.get(value);
-      const secondary = [info?.albumArtist, info?.year].filter(Boolean).join(' · ');
+      const secondary = info?.year ? String(info.year) : undefined;
       return { value, count, label: info?.name || '(No album)', secondary };
     })
     .toSorted(byLabel);
