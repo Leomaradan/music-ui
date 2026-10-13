@@ -8,6 +8,7 @@ import {
   getFacets,
   pruneFilters,
   type Filters,
+  tracksForValues,
 } from './facets';
 
 let catalog: Catalog;
@@ -93,6 +94,28 @@ describe('computeFacets', () => {
     expect(facets.artists.at(-1)).toMatchObject({ value: NONE, label: '(Unknown artist)' });
     expect(facets.albums.at(-1)).toMatchObject({ value: NONE, label: '(No album)' });
     expect(computeFacets(bare, f({ genres: [NONE] })).tracks.map((t) => t.id)).toEqual(['x']);
+  });
+});
+
+const titlesOf = (tracks: { title: string }[]) => tracks.map((t) => t.title);
+
+describe('tracksForValues', () => {
+  it('lists the tracks of the values, within the boxes before theirs', () => {
+    expect(titlesOf(tracksForValues(catalog, EMPTY_FILTERS, 'artists', ['Aerosmith']))).toEqual([
+      'Walk This Way',
+      'Sweet Emotion',
+      'Back in the Saddle (Live)',
+      'Love in an Elevator',
+    ]);
+    expect(
+      titlesOf(tracksForValues(catalog, f({ folders: [2] }), 'artists', ['Aerosmith'])),
+    ).toEqual(['Back in the Saddle (Live)']);
+  });
+
+  it('ignores the boxes after theirs, and combines several values', () => {
+    const filters = f({ artists: ['ABBA'], albums: [albumId('Pump')] });
+    expect(tracksForValues(catalog, filters, 'genres', ['Jazz', 'Dance'])).toHaveLength(4);
+    expect(tracksForValues(catalog, filters, 'genres', [])).toEqual([]);
   });
 });
 

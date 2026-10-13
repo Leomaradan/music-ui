@@ -18,7 +18,7 @@ interface PlaylistState {
 
   load(): Promise<void>;
   loadTracks(id: string): Promise<void>;
-  /** Plays the playlist from its first track (it becomes "Currently playing"). */
+  /** Plays the playlist in the current playback mode (it becomes "Currently playing"). */
   play(id: string): Promise<void>;
   /** Creates a playlist (a free "New playlist N" name by default) and opens its rename field. */
   create(trackIds?: string[], name?: string): Promise<PlaylistSummary | null>;
@@ -89,7 +89,7 @@ export const usePlaylistStore = create<PlaylistState>()((set, get) => {
         notify(`"${name}" is empty`, 'info');
         return;
       }
-      usePlayerStore.getState().playQueue(trackIds, 0);
+      usePlayerStore.getState().playSelection(trackIds, null);
     },
 
     async create(trackIds = [], name) {

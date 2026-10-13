@@ -137,6 +137,24 @@ export function pruneFilters(catalog: Catalog, filters: Filters): Filters {
   return changed ? next : filters;
 }
 
+/**
+ * Tracks a box's values stand for: those matching the boxes before `level` (as currently
+ * filtered) and any of `values` at `level`, in catalog order. What selecting these values
+ * would list, used to drag values from a filter box.
+ */
+export function tracksForValues<L extends FilterLevel>(
+  catalog: Catalog,
+  filters: Filters,
+  level: L,
+  values: Filters[L],
+): Track[] {
+  let tracks = catalog.tracks;
+  for (const parent of FILTER_LEVELS.slice(0, FILTER_LEVELS.indexOf(level))) {
+    tracks = narrow(parent, tracks, filters[parent]);
+  }
+  return values.length === 0 ? [] : narrow(level, tracks, values);
+}
+
 let memo: { catalog: Catalog; filters: Filters; facets: Facets } | null = null;
 
 /** `computeFacets` with a one-entry cache, shared by the filter boxes and the track table. */

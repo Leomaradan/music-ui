@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState, type MouseEvent } from 'react';
+import { useMemo, useRef, useState, type DragEvent, type MouseEvent } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
@@ -11,9 +11,16 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import ClearIcon from '@mui/icons-material/FilterListOff';
 import SearchIcon from '@mui/icons-material/Search';
-import type { FacetOption, FilterLevel, Filters } from '@/client/catalog/facets';
+import {
+  tracksForValues,
+  type FacetOption,
+  type FilterLevel,
+  type Filters,
+} from '@/client/catalog/facets';
+import { endTrackDrag, startTrackDrag } from '@/client/dnd';
 import { formatCount } from '@/client/format';
 import { clickSelection } from '@/client/selection';
+import { useCatalogStore } from '@/client/stores/catalogStore';
 import { useFilterStore } from '@/client/stores/filterStore';
 
 const ROW_HEIGHT = 30;
@@ -36,7 +43,8 @@ const normalize = (text: string) =>
 /**
  * One multi-select box of the cascading filters (PLAN.md §7.3). Nothing selected = all.
  * Selection works like a desktop list: click selects one value, Ctrl/Cmd-click toggles,
- * Shift-click selects a range (in the order shown).
+ * Shift-click selects a range (in the order shown). Values can be dragged to the sidebar: the
+ * selected values when dragging one of them, otherwise the dragged value alone.
  */
 export default function FilterBox<L extends FilterLevel>({
   level,
@@ -74,6 +82,21 @@ export default function FilterBox<L extends FilterLevel>({
   const clear = () => {
     setAnchor(null);
     setLevel(level, [] as unknown as Filters[L]);
+  };
+
+  const onDragStart = (event: DragEvent, option: FacetOption<Filters[L][number]>) => {
+    const catalog = useCatalogStore.getState().catalog;
+    if (!catalog) return event.preventDefault();
+    const dragged = selectedSet.has(option.value)
+      ? options.filter((o) => selectedSet.has(o.value))
+      : [option];
+    const values = dragged.map((o) => o.value) as Filters[L];
+    const filters = useFilterStore.getState().filters;
+    const trackIds = tracksForValues(catalog, filters, level, values).map((t) => t.id);
+    if (trackIds.length === 0) return event.preventDefault();
+    // A playlist created from this drop is named after the values.
+    const name = dragged.length <= 3 ? dragged.map((o) => o.label).join(', ') : null;
+    startTrackDrag(event.dataTransfer, trackIds, name);
   };
 
   const select = (event: MouseEvent, option: FacetOption<Filters[L][number]>) => {
@@ -165,6 +188,9 @@ export default function FilterBox<L extends FilterLevel>({
                 dense
                 selected={isSelected}
                 onClick={(event) => (isAll ? clear() : select(event, option!))}
+                draggable={!isAll}
+                onDragStart={isAll ? undefined : (event) => onDragStart(event, option!)}
+                onDragEnd={isAll ? undefined : endTrackDrag}
                 sx={{
                   position: 'absolute',
                   top: 0,

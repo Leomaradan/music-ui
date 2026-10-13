@@ -95,6 +95,22 @@ describe('queue persistence', () => {
     expect(local()).toMatchObject({ position: 17, playing: true, savedAt: Date.now() });
   });
 
+  it('saves and restores the playback mode and the selection', () => {
+    mockServer();
+    stop = startQueuePersistence();
+    usePlayerStore.setState({ queue: ['b'], index: 0, selection: ['a', 'b', 'c'] });
+    usePlayerStore.getState().setMode('albumRandom');
+    expect(local()).toMatchObject({ mode: 'albumRandom', selection: ['a', 'b', 'c'] });
+    stop();
+
+    usePlayerStore.setState(initial, true);
+    stop = startQueuePersistence();
+    expect(usePlayerStore.getState()).toMatchObject({
+      mode: 'albumRandom',
+      selection: ['a', 'b', 'c'],
+    });
+  });
+
   it("falls back to the account's queue on the server", async () => {
     mockServer({ ids: ['x', 'y'], index: 1, position: 4 });
     stop = startQueuePersistence();

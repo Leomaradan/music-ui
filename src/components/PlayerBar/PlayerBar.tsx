@@ -21,6 +21,7 @@ import { formatDuration } from '@/client/format';
 import { useCurrentTrack } from '@/client/hooks';
 import { usePlayerStore } from '@/client/stores/playerStore';
 import { useUiStore } from '@/client/stores/uiStore';
+import PlaybackModeButton from './PlaybackModeButton';
 
 const player = () => usePlayerStore.getState();
 const toggle = () => player().toggle();
@@ -31,7 +32,10 @@ const seek = (seconds: number) => player().seek(seconds);
 const setVolume = (volume: number) => player().setVolume(volume);
 const openSettings = () => useUiStore.getState().openSettings();
 
-/** Top bar (PLAN.md §7.1): transport buttons, current track, seek slider, volume, settings. */
+/**
+ * Top bar (PLAN.md §7.1): transport buttons, playback mode, current track, seek slider,
+ * volume, settings.
+ */
 export default function PlayerBar() {
   const status = usePlayerStore((state) => state.status);
   const index = usePlayerStore((state) => state.index);
@@ -75,6 +79,7 @@ export default function PlayerBar() {
           >
             <SkipNextIcon />
           </IconButton>
+          <PlaybackModeButton />
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: 300, minWidth: 0 }}>

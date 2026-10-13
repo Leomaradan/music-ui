@@ -157,7 +157,7 @@ export default function TrackTable() {
     if (inQueue) {
       player.playIndex(positionOf(id));
     } else {
-      player.playQueue(
+      player.playSelection(
         listed.map((row) => row.original.id),
         listed.findIndex((row) => row.id === id),
       );
