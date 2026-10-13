@@ -44,10 +44,10 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import LockIcon from '@mui/icons-material/LockOutlined';
 import PlaylistIcon from '@mui/icons-material/QueueMusicOutlined';
 import QueueMusicIcon from '@mui/icons-material/QueueMusic';
-import { droppedTracks, endTrackDrag, isTrackDrag } from '@/client/dnd';
+import { droppedName, droppedTracks, endTrackDrag, isTrackDrag } from '@/client/dnd';
 import { formatCount } from '@/client/format';
 import { usePlayerStore } from '@/client/stores/playerStore';
-import { usePlaylistStore } from '@/client/stores/playlistStore';
+import { freePlaylistName, usePlaylistStore } from '@/client/stores/playlistStore';
 import { notify } from '@/client/stores/notificationStore';
 import { useSelectionStore } from '@/client/stores/selectionStore';
 import {
@@ -97,6 +97,7 @@ export default function Sidebar() {
       event.preventDefault();
       setDropTarget(null);
       const trackIds = droppedTracks(event.dataTransfer);
+      const name = droppedName(event.dataTransfer);
       endTrackDrag();
       if (!trackIds?.length) return;
       if (key === 'queue') {
@@ -106,7 +107,11 @@ export default function Sidebar() {
           'success',
         );
       } else if (key === 'new') {
-        void usePlaylistStore.getState().create(trackIds);
+        // Named after what was dragged from a filter ("Aerosmith"), made unique if taken.
+        const taken = usePlaylistStore.getState().playlists.map((p) => p.name);
+        void usePlaylistStore
+          .getState()
+          .create(trackIds, name ? freePlaylistName(taken, name) : undefined);
       } else {
         void usePlaylistStore.getState().append(key.slice('playlist:'.length), trackIds);
       }

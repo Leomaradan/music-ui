@@ -131,6 +131,10 @@ const grid = () => screen.getByRole('grid', { name: 'Tracks' });
 const rows = () => within(grid()).getAllByRole('row').slice(1);
 const titleOf = (row: HTMLElement) => row.querySelectorAll('td')[1]?.textContent;
 const titleById = (id: string) => catalog.tracks.find((t) => t.id === id)?.title;
+const filterOption = (box: string, name: string) =>
+  within(screen.getByRole('listbox', { name: box })).getByRole('option', {
+    name: new RegExp(`^${name}`),
+  });
 const playlistButton = (name: RegExp) =>
   within(screen.getByRole('list', { name: 'Playlists' })).getByRole('button', { name });
 
@@ -244,6 +248,63 @@ describe('playlists', () => {
       ).toBeNull(),
     );
     expect(requests.some((r) => r.method === 'DELETE' && r.url === '/api/playlists/p1')).toBe(true);
+  });
+
+  it('drags an artist from the filters: a playlist named after it, with all its tracks', async () => {
+    await renderApp();
+    const { accepted, transfer } = dragTo(
+      filterOption('Artist', 'Aerosmith'),
+      screen.getByRole('region', { name: 'New playlist drop zone' }),
+    );
+    expect(accepted).toBe(true);
+    expect(transfer.data['text/plain']).toBe('Aerosmith · 4 tracks');
+    await waitFor(() => expect(requests.some((r) => r.method === 'POST')).toBe(true));
+    const body = requests.find((r) => r.method === 'POST')!.body as {
+      name: string;
+      trackIds: string[];
+    };
+    expect(body.name).toBe('Aerosmith');
+    expect(body.trackIds.map(titleById)).toEqual([
+      'Walk This Way',
+      'Sweet Emotion',
+      'Back in the Saddle (Live)',
+      'Love in an Elevator',
+    ]);
+    // Dragging does not change the filters.
+    expect(useFilterStore.getState().filters).toEqual(EMPTY_FILTERS);
+  });
+
+  it('drags every selected value of a box, and makes the name unique', async () => {
+    server.playlists.push({ id: 'p9', name: 'ABBA, Miles Davis', songCount: 0, readonly: false });
+    server.tracks.p9 = [];
+    await renderApp();
+    fireEvent.click(filterOption('Artist', 'ABBA'));
+    fireEvent.click(filterOption('Artist', 'Miles Davis'), { ctrlKey: true });
+    dragTo(
+      filterOption('Artist', 'ABBA'),
+      screen.getByRole('region', { name: 'New playlist drop zone' }),
+    );
+    await waitFor(() => expect(requests.some((r) => r.method === 'POST')).toBe(true));
+    const body = requests.find((r) => r.method === 'POST')!.body as {
+      name: string;
+      trackIds: string[];
+    };
+    expect(body.name).toBe('ABBA, Miles Davis 2');
+    expect(body.trackIds).toHaveLength(4);
+  });
+
+  it('drops a filter value on an existing playlist (appended)', async () => {
+    await renderApp();
+    dragTo(filterOption('Album', 'Pump'), playlistButton(/Road trip/));
+    await waitFor(() => expect(playlistButton(/Road trip\s*3/)).toBeInTheDocument());
+    const patch = requests.find((r) => r.method === 'PATCH')!;
+    expect((patch.body as { add: string[] }).add.map(titleById)).toEqual(['Love in an Elevator']);
+  });
+
+  it('does not drag "All"', async () => {
+    await renderApp();
+    expect(filterOption('Artist', 'All')).toHaveAttribute('draggable', 'false');
+    expect(filterOption('Artist', 'ABBA')).toHaveAttribute('draggable', 'true');
   });
 
   it('shows the drop zone above the playlists', async () => {

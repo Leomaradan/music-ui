@@ -223,6 +223,8 @@ Drop targets for tracks dragged from the table:
 - An **existing playlist**: the tracks are appended to it.
 - **Currently playing**: the tracks are added to the end of the queue.
 
+Values of the filter boxes can be dragged too (except *All*): the dragged value, or all the selected values of its box when it is one of them. They carry the tracks that selecting them would list (within the boxes to the left; the filters themselves do not change). A playlist created from such a drop is named after the values ("Aerosmith", made unique as "Aerosmith 2" if taken).
+
 The **filter boxes are always visible**, whichever sidebar item is selected. When "Currently playing" or a custom playlist is shown, the boxes keep displaying the current filter state but do not filter that list. **Changing any filter switches the view to "Filter results".**
 
 ### 7.3 Filters (right, upper part)
