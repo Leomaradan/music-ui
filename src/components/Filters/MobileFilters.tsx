@@ -48,7 +48,7 @@ export default function MobileFilters() {
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, py: 0.5, minWidth: 0 }}>
       <Button
         size="small"
-        sx={{minWidth: '45px'}}
+        sx={{ minWidth: '45px' }}
         onClick={() => setOpen(true)}
         startIcon={
           <Badge badgeContent={active} color="primary" variant="dot">
