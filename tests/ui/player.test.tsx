@@ -48,6 +48,7 @@ const grid = () => screen.getByRole('grid', { name: 'Tracks' });
 const rows = () => within(grid()).getAllByRole('row').slice(1);
 const titleOf = (row: HTMLElement) => row.querySelectorAll('td')[1]?.textContent;
 const bar = () => screen.getByRole('banner');
+const favicon = () => document.head.querySelector('link[rel~="icon"]')?.getAttribute('href');
 const titleById = (id: string | null | undefined) =>
   useCatalogStore.getState().catalog?.tracks.find((t) => t.id === id)?.title;
 
@@ -95,6 +96,25 @@ describe('player', () => {
     expect(usePlayerStore.getState()).toMatchObject({ status: 'stopped', position: 0 });
     fireEvent.click(within(bar()).getByRole('button', { name: 'Previous' }));
     expect(usePlayerStore.getState().index).toBe(0);
+  });
+
+  it('shows the album cover of the current track as favicon', () => {
+    const catalog = useCatalogStore.getState().catalog!;
+    const [first, second] = catalog.tracks;
+    const withCover = { ...first!, coverArt: 'al-1' };
+    useCatalogStore.setState({
+      catalog: { ...catalog, tracks: [withCover, ...catalog.tracks.slice(1)] },
+    });
+    const { unmount } = renderApp();
+    expect(favicon()).toBeUndefined();
+
+    act(() => usePlayerStore.getState().playQueue([withCover.id, second!.id], 0));
+    expect(favicon()).toBe('/api/cover/al-1?size=64');
+    act(() => usePlayerStore.getState().next());
+    expect(favicon()).toBeUndefined();
+    act(() => usePlayerStore.getState().previous());
+    unmount();
+    expect(favicon()).toBeUndefined();
   });
 
   it('shows the queue, and Delete removes tracks from it', () => {
