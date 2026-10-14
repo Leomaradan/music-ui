@@ -1,5 +1,6 @@
 # Example deployment (PLAN.md §10). On Unraid, the template in unraid/ is the easier route.
 #   SUBSONIC_PASSWORD=… docker compose up -d
+#   docker exec -it music-ui node cli.mjs user add <name>   # account for the login screen
 services:
   music-ui:
     image: ghcr.io/leomaradan/music-ui:latest
@@ -14,6 +15,7 @@ services:
       SUBSONIC_USER: music
       SUBSONIC_PASSWORD: ${SUBSONIC_PASSWORD:?set SUBSONIC_PASSWORD}
       SYNC_INTERVAL_MINUTES: '15'
+      AUTH_ENABLED: 'true' # false when a reverse proxy already authenticates
     networks:
       - music
 

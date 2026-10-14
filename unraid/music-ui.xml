@@ -32,5 +32,7 @@
   <Config Name="Navidrome user" Target="SUBSONIC_USER" Default="" Mode="" Description="Navidrome account used by the app (a non-admin user with access to every library)." Type="Variable" Display="always" Required="true" Mask="false"/>
   <Config Name="Navidrome password" Target="SUBSONIC_PASSWORD" Default="" Mode="" Description="Password of that account. Only used on the server; never sent to the browser." Type="Variable" Display="always" Required="true" Mask="true"/>
   <Config Name="Sync interval (minutes)" Target="SYNC_INTERVAL_MINUTES" Default="15" Mode="" Description="How often to check Navidrome for library changes (0 = only at startup and on manual rescan)." Type="Variable" Display="advanced" Required="false" Mask="false">15</Config>
+  <Config Name="Login screen" Target="AUTH_ENABLED" Default="true" Mode="" Description="Ask for a username and password before showing the UI. Create accounts from the Unraid console: docker exec -it music-ui node cli.mjs user add &lt;name&gt;. Set to false only when a reverse proxy already authenticates." Type="Variable" Display="always" Required="false" Mask="false">true</Config>
+  <Config Name="Session length (days)" Target="SESSION_DAYS" Default="30" Mode="" Description="How long a login lasts after the last visit." Type="Variable" Display="advanced" Required="false" Mask="false">30</Config>
   <Config Name="Log level" Target="LOG_LEVEL" Default="info" Mode="" Description="debug, info, warn or error." Type="Variable" Display="advanced" Required="false" Mask="false">info</Config>
 </Container>

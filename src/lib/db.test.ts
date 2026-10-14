@@ -11,8 +11,17 @@ describe('openDatabase', () => {
       .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
       .all()
       .map((row) => row.name);
-    expect(tables).toEqual(['albums', 'app_state', 'folders', 'meta', 'track_genres', 'tracks']);
-    expect(db.prepare('PRAGMA user_version').get()).toEqual({ user_version: 1 });
+    expect(tables).toEqual([
+      'albums',
+      'app_state',
+      'folders',
+      'meta',
+      'sessions',
+      'track_genres',
+      'tracks',
+      'users',
+    ]);
+    expect(db.prepare('PRAGMA user_version').get()).toEqual({ user_version: 2 });
   });
 
   it('creates the data directory and reopens an existing database', () => {

@@ -60,6 +60,21 @@ const MIGRATIONS: string[] = [
     json TEXT NOT NULL
   );
   `,
+  // UI accounts (managed with the `cli.mjs` script) and their login sessions.
+  `
+  CREATE TABLE users (
+    username     TEXT PRIMARY KEY COLLATE NOCASE,
+    passwordHash TEXT NOT NULL,
+    created      TEXT NOT NULL
+  );
+  CREATE TABLE sessions (
+    tokenHash TEXT PRIMARY KEY,
+    username  TEXT NOT NULL REFERENCES users(username) ON DELETE CASCADE ON UPDATE CASCADE,
+    created   TEXT NOT NULL,
+    expires   TEXT NOT NULL
+  );
+  CREATE INDEX sessions_username ON sessions(username);
+  `,
 ];
 
 /** Opens (and migrates) the app database. Use `:memory:` in tests. */
@@ -71,12 +86,15 @@ export function openDatabase(path: string): DatabaseSync {
   return db;
 }
 
+function userVersion(db: DatabaseSync): number {
+  return (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
+}
+
 function migrate(db: DatabaseSync): void {
-  const { user_version: current } = db.prepare('PRAGMA user_version').get() as {
-    user_version: number;
-  };
-  for (let version = current; version < MIGRATIONS.length; version++) {
+  for (let version = userVersion(db); version < MIGRATIONS.length; version++) {
     transaction(db, () => {
+      // Another process (the app, or the user CLI) may have migrated in the meantime.
+      if (userVersion(db) > version) return;
       db.exec(MIGRATIONS[version] ?? '');
       db.exec(`PRAGMA user_version = ${version + 1}`);
     });

@@ -37,6 +37,8 @@ WORKDIR /app
 # next to it (Next.js does not include them in the standalone output).
 COPY --from=build --chown=99:100 /app/.next/standalone ./
 COPY --from=build --chown=99:100 /app/.next/static ./.next/static
+# User management for the login screen: docker exec -it music-ui node cli.mjs user add <name>
+COPY --from=build --chown=99:100 /app/scripts/cli.mjs /app/scripts/password.mjs ./
 
 # Unraid convention: run as nobody:users (99:100), the owner of /mnt/user/appdata.
 RUN mkdir -p /data && chown 99:100 /data

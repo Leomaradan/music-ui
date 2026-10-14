@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import type { CatalogSnapshot } from '@/lib/catalog/snapshot';
 import { decodeSnapshot, type Catalog } from '@/client/catalog/decode';
 import { idbGet, idbSet } from '@/client/storage/idb';
+import { redirectToLogin } from '@/client/auth';
 
 const CACHE_KEY = 'catalog-snapshot';
 const WAIT_RETRY_MS = 5_000;
@@ -58,6 +59,10 @@ export const useCatalogStore = create<CatalogState>()((set, get) => ({
           cache: 'no-store',
           headers: current ? { 'if-none-match': `"${current.version}"` } : {},
         });
+        if (response.status === 401) {
+          redirectToLogin();
+          return;
+        }
         if (response.status === 304) {
           set({ status: 'ready', error: null });
         } else if (response.status === 503) {

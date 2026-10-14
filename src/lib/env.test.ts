@@ -16,7 +16,15 @@ describe('parseEnv', () => {
       SYNC_INTERVAL_MINUTES: 15,
       DATA_DIR: './data',
       LOG_LEVEL: 'info',
+      AUTH_ENABLED: true,
+      SESSION_DAYS: 30,
     });
+  });
+
+  it('parses AUTH_ENABLED as a boolean', () => {
+    expect(parseEnv({ ...valid, AUTH_ENABLED: 'false' }).AUTH_ENABLED).toBe(false);
+    expect(parseEnv({ ...valid, AUTH_ENABLED: '1' }).AUTH_ENABLED).toBe(true);
+    expect(() => parseEnv({ ...valid, AUTH_ENABLED: 'maybe' })).toThrow(/AUTH_ENABLED/);
   });
 
   it('coerces numbers', () => {

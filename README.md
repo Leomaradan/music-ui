@@ -13,6 +13,7 @@ Web music player for a private [Navidrome](https://www.navidrome.org/) server (S
 pnpm install
 cp .env.example .env.local   # then set SUBSONIC_URL / SUBSONIC_USER / SUBSONIC_PASSWORD
 pnpm dev                      # http://localhost:3000
+node scripts/cli.mjs user add me   # an account for the login screen (once the app has started)
 ```
 
 The server refuses to start (with a list of what's wrong) when the configuration is invalid.
@@ -120,6 +121,19 @@ The image `ghcr.io/leomaradan/music-ui` (linux/amd64) is built and published by 
 
 **With Docker Compose**: see `compose.yml` (`SUBSONIC_PASSWORD=… docker compose up -d`).
 
+**Accounts.** The UI is behind a login screen (`AUTH_ENABLED=true`, the default). The app still talks to Navidrome with its single shared account; these accounts only protect the UI. Manage them from the server (Unraid: the container's _Console_, or `docker exec`):
+
+```sh
+docker exec -it music-ui node cli.mjs user add alice      # asks for the password
+docker exec -it music-ui node cli.mjs user passwd alice   # also signs alice out everywhere
+docker exec -it music-ui node cli.mjs user remove alice
+docker exec -it music-ui node cli.mjs user list
+docker exec -it music-ui node cli.mjs sessions clear      # signs everyone out
+echo 'secret-pass' | docker exec -i music-ui node cli.mjs user add bob   # scripted
+```
+
+Sessions last `SESSION_DAYS` (30) after the last visit. Set `AUTH_ENABLED=false` only when something in front of the app (a reverse proxy with its own login) already authenticates. `/api/health` stays public for the Docker healthcheck.
+
 Notes:
 
 - The container runs as `99:100` (nobody:users). If `/mnt/user/appdata/music-ui` belongs to someone else, the container stops at startup and prints the `chown` command to run.
@@ -141,3 +155,4 @@ Notes:
 - [x] M10 — Settings (library status, rescan, theme, layout reset, shortcuts), track in the tab title
 - [x] M4 — Docker image (`ghcr.io/leomaradan/music-ui`), Unraid template, CI
 - [x] M11 — Storybook with story tests (Vitest addon: play functions + a11y checks in Chromium)
+- [x] M12 — Login screen in front of the UI, accounts managed with `cli.mjs`

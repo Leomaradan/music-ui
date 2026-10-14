@@ -10,6 +10,10 @@ const envSchema = z.object({
   SYNC_INTERVAL_MINUTES: z.coerce.number().int().min(0).default(15),
   DATA_DIR: z.string().min(1).default('./data'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  /** Login screen in front of the UI (users are managed with `cli.mjs`). */
+  AUTH_ENABLED: z.stringbool().default(true),
+  /** A session lasts this long after the last visit. */
+  SESSION_DAYS: z.coerce.number().int().positive().max(3650).default(30),
 });
 
 export type Env = z.infer<typeof envSchema>;
