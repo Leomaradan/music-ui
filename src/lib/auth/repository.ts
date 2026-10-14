@@ -54,7 +54,8 @@ export class AuthRepository {
     if (!row) return null;
     const now = this.now().getTime();
     const expires = Date.parse(row.expires);
-    if (!(expires > now)) {
+    // An unreadable date counts as expired.
+    if (Number.isNaN(expires) || expires <= now) {
       this.db.prepare('DELETE FROM sessions WHERE tokenHash = ?').run(tokenHash);
       return null;
     }

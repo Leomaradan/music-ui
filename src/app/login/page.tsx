@@ -8,9 +8,9 @@ export const metadata: Metadata = { title: 'Sign in · Music UI' };
 
 export default async function LoginPage({
   searchParams,
-}: {
+}: Readonly<{
   searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
+}>) {
   const { next } = await searchParams;
   const target = safeNextPath(typeof next === 'string' ? next : undefined);
   const auth = getAuthService();

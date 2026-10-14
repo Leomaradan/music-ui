@@ -2,13 +2,19 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, fn, screen, waitFor } from 'storybook/test';
 import LoginForm from './LoginForm';
 
+function urlOf(input: RequestInfo | URL): string {
+  if (typeof input === 'string') return input;
+  if (input instanceof URL) return input.href;
+  return input.url;
+}
+
 /** Answers POST /api/auth/login like the server: one valid account, alice / correct-horse. */
 function installLoginApi(): () => void {
   const original = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-    if (url !== '/api/auth/login') return original(input, init);
-    const { username, password } = JSON.parse(String(init?.body)) as Record<string, string>;
+    if (urlOf(input) !== '/api/auth/login') return original(input, init);
+    const body = typeof init?.body === 'string' ? init.body : '{}';
+    const { username, password } = JSON.parse(body) as Record<string, string>;
     if (username === 'alice' && password === 'correct-horse') {
       return new Response(null, { status: 204 });
     }
@@ -57,6 +63,6 @@ export const WrongPassword: Story = {
 export const NoUsers: Story = {
   args: { noUsers: true },
   play: async () => {
-    expect(screen.getByText(/node cli.mjs user add/)).toBeInTheDocument();
+    expect(await screen.findByText(/node cli.mjs user add/)).toBeInTheDocument();
   },
 };

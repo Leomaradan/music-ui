@@ -19,7 +19,7 @@ export interface LoginFormProps {
 }
 
 /** The login screen shown in front of the app when AUTH_ENABLED is on. */
-export default function LoginForm({ next, noUsers, onSignedIn }: LoginFormProps) {
+export default function LoginForm({ next, noUsers, onSignedIn }: Readonly<LoginFormProps>) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
