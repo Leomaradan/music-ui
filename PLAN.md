@@ -74,7 +74,7 @@ Rough size: 50 000 tracks come to about 6–8 MB of JSON, or about 1–1.5 MB gz
 | Track table | **TanStack Table v9 + TanStack Virtual**, rendered with MUI `Table` components | Sorting and column resizing from TanStack; selection is the app's own (`src/client/selection.ts`). Measured with 50k tracks: ~0.7 s first render, <0.2 s per filter change. Avoids MUI X Pro licensing |
 | Drag & drop | **dnd-kit** (`@dnd-kit/core`, `@dnd-kit/sortable`) for reordering the sidebar; **native HTML drag and drop** for table rows → sidebar | Native DnD for rows because the dragged row can scroll out of the virtualized table mid-drag |
 | Validation | `zod` | Env vars, API inputs, Navidrome responses |
-| Tests | Vitest + MSW, Playwright | |
+| Tests | Vitest (unit + jsdom UI), **Storybook 10** with the Vitest addon (stories as browser tests, Playwright Chromium), an in-memory fake of the app API (`tests/helpers/fake-api.ts`) | See §11 |
 | Tooling | pnpm, **oxlint** (lint), **oxfmt** (format), TypeScript strict | Oxc tools (Rust), much faster than ESLint/Prettier. Oxlint plugins enabled: typescript, react (incl. hooks rules), nextjs, jsx-a11y, import, unicorn, vitest. Config: `.oxlintrc.json`, `.oxfmtrc.json`. Disabled on purpose: `no-await-in-loop` (sequential server calls are intentional), `jsx-a11y/prefer-tag-over-role` (virtualized listbox/grid widgets need ARIA roles), `react/incompatible-library` (React Compiler is not used) |
 | CI | GitHub Actions → GHCR (`linux/amd64`) | |
 
@@ -284,7 +284,8 @@ music-ui/
 │  ├─ components/
 │  │  ├─ PlayerBar/  Sidebar/  Filters/  TrackTable/  SettingsDialog/
 │  └─ theme/
-├─ tests/{unit,integration,e2e}/
+├─ .storybook/                    # Storybook config: preview reset, fake media endpoints
+├─ tests/{routes,ui,integration,helpers,fixtures}/
 ├─ docker/compose.dev.yml           # Navidrome + sample music (2 libraries) for dev/e2e
 ├─ unraid/music-ui.xml              # Unraid Docker template
 ├─ Dockerfile
@@ -363,15 +364,32 @@ networks:
 
 ## 11. Testing
 
-- **Unit:** token/salt generation, Navidrome error mapping, snapshot encode/decode round-trip, **facet cascade** (options per level, reset of descendant boxes, empty = all), exclusions, table multi-select logic, player prev/next rules.
-- **Integration (MSW):** sync (incremental: new, changed and removed albums), stream proxy (Range → 206, client abort), playlist routes.
-- **E2E (Playwright)** against `docker/compose.dev.yml` (Navidrome + CC-licensed sample tracks in **two** music folders). The tests:
-  - wait for the initial sync
-  - filter Folder → Genre → Artist and check the cascade and resets
-  - remove tracks from the results
-  - drag the selection onto the sidebar, which creates a playlist
-  - reorder playlists
-  - play a track, seek, then use next and stop
+Two Vitest projects (`vitest.config.ts`), both run by `pnpm test` and in CI:
+
+- **`unit`** (Node / jsdom):
+  - Unit tests: token/salt generation, Navidrome error mapping, snapshot encode/decode, facet cascade, exclusions, selection logic, playback modes, player rules.
+  - Route tests against a fake Navidrome (`tests/helpers/fake-navidrome.ts`, real captured responses).
+  - jsdom UI tests of the whole app (`tests/ui/`).
+  - `tests/integration/` runs against the dev Navidrome (`pnpm test:integration`).
+- **`storybook`** (headless Chromium through Playwright):
+  - The Storybook Vitest addon turns every story into a test. It renders the story, runs its `play` function, then runs the axe accessibility checks; violations fail.
+  - Stories live next to their component (`src/components/**/*.stories.tsx`).
+  - **No server needed:**
+    - The app's JSON API is the in-memory `FakeApi`.
+    - `.storybook/main.ts` serves `/api/stream` (silent WAV with byte ranges, so seeking works) and `/api/cover`.
+    - The library is `tests/fixtures/catalog-snapshot.json`. A unit test keeps it equal to what the sync produces from the Navidrome fixtures.
+  - The global `beforeEach` (`.storybook/preview.tsx` → `resetApp`) resets stores, localStorage, IndexedDB and the fake API before each story.
+  - **Coverage:**
+    - filters (cascade, list-style selection, search, dragging values);
+    - track table (selection, remove from results, double-click, sort, views);
+    - sidebar (drops, naming, read-only refusal, rename/delete, keyboard reorder);
+    - player bar with the real audio engine (transport, seek, resume after reload, restore from server);
+    - playback modes; settings; notifications;
+    - cross-component scenarios in `App/AppShell`.
+
+**Rule for new features:** every UI change comes with a story whose `play` function exercises it, so `pnpm test` catches regressions. Helpers:
+- `tests/helpers/stories.ts`: sample catalog and playlists, `trackByTitle`, `fakeApi()`;
+- `tests/helpers/dnd.ts`: native drag and drop.
 
 ---
 
@@ -395,6 +413,7 @@ networks:
 | M8 | Player bar + audio engine + Currently playing queue (+ Navidrome play queue) | Play, pause, stop, previous, next and seek work, and the queue survives a reload |
 | M9 | Playlists: sidebar list, DnD reorder, drag tracks → new playlist, rename/delete | The order persists, and playlists also show up in Navidrome |
 | M10 | Polish: keyboard shortcuts, Media Session, settings dialog (rescan, status), dark mode | Settings (gear in the player bar): Navidrome connection, sync status/progress, rescan; theme System/Light/Dark (saved per browser); reset sort and column widths; shortcuts list (also `?`). Track shown in the browser tab title |
+| M11 | Storybook + story tests (Vitest addon, §11) | Every component has stories whose play functions and a11y checks run in Chromium in `pnpm test` and CI |
 
 ---
 

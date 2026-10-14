@@ -167,3 +167,7 @@ coverage/
 
 # Generated sample music for the dev Navidrome
 /docker/music/
+
+# Storybook build output, and Vitest browser-mode failure screenshots
+storybook-static/
+__screenshots__/

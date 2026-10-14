@@ -1,0 +1,262 @@
+{
+  "version": "v1",
+  "syncedAt": "2026-10-12T00:00:00Z",
+  "folders": [
+    {
+      "id": 1,
+      "name": "Main"
+    },
+    {
+      "id": 2,
+      "name": "Live"
+    }
+  ],
+  "genres": [
+    "Pop",
+    "Rock",
+    "Jazz",
+    "Dance"
+  ],
+  "artists": [
+    "ABBA",
+    "Aerosmith",
+    "Miles Davis",
+    "Various Artists",
+    "Artist One",
+    "Artist Two feat. Artist One"
+  ],
+  "albums": {
+    "id": [
+      "5X9iupbHykcoxdksxvZ8To",
+      "06DjnnRReUfc4YAHHhUHAG",
+      "1Xo05zZEl1ynuTNV8Pu5ir",
+      "3uZ2r1ByBF71qchXZm6oZG",
+      "2NfIfJ2FAXw0gWcQPGmTmU",
+      "2fqF38DPTuuDTcSA9PFpNT"
+    ],
+    "name": [
+      "Arrival",
+      "Toys in the Attic",
+      "Live! Bootleg",
+      "Pump",
+      "Live at the Plugged Nickel",
+      "Summer Hits"
+    ],
+    "artist": [
+      0,
+      1,
+      1,
+      1,
+      2,
+      3
+    ],
+    "year": [
+      1976,
+      1975,
+      1978,
+      1989,
+      1965,
+      2001
+    ],
+    "coverArt": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "tracks": {
+    "id": [
+      "35dqDqnMDFECu5ParKZgsU",
+      "7cYkanwfv2rdtXfeXCkR4h",
+      "4WRe3XN3ghQwCg107F2CiZ",
+      "34gTH7IJ8R82ybDhqQ34Gp",
+      "4cUPTgJopep8DBV4TH6St3",
+      "3LbikHn2XIS3HeWazU08rD",
+      "6zhR5A4Y5hf000sPh6O0Ck",
+      "3pKWPK4cGKSu1dg0dnXvxc",
+      "02a6ACkpl1SXjzYMaHdxP9",
+      "4gOO9pLRBVbbdFnSmgAcW8"
+    ],
+    "title": [
+      "Dancing Queen",
+      "Knowing Me, Knowing You",
+      "Walk This Way",
+      "Sweet Emotion",
+      "Back in the Saddle (Live)",
+      "Love in an Elevator",
+      "So What (Live)",
+      "Stella by Starlight (Live)",
+      "Sunny Day",
+      "Beach Night"
+    ],
+    "artist": [
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      2,
+      2,
+      4,
+      5
+    ],
+    "albumArtist": [
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      2,
+      2,
+      3,
+      3
+    ],
+    "album": [
+      0,
+      0,
+      1,
+      1,
+      2,
+      3,
+      4,
+      4,
+      5,
+      5
+    ],
+    "folder": [
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      1,
+      1,
+      0,
+      0
+    ],
+    "genres": [
+      [
+        0
+      ],
+      [
+        0
+      ],
+      [
+        1
+      ],
+      [
+        1
+      ],
+      [
+        1
+      ],
+      [
+        1
+      ],
+      [
+        2
+      ],
+      [
+        2
+      ],
+      [
+        0,
+        3
+      ],
+      [
+        0,
+        3
+      ]
+    ],
+    "year": [
+      1976,
+      1976,
+      1975,
+      1975,
+      1978,
+      1989,
+      1965,
+      1965,
+      2001,
+      2001
+    ],
+    "track": [
+      1,
+      2,
+      1,
+      2,
+      1,
+      1,
+      1,
+      2,
+      1,
+      2
+    ],
+    "disc": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "duration": [
+      8,
+      8,
+      8,
+      8,
+      8,
+      8,
+      8,
+      8,
+      8,
+      8
+    ],
+    "bitRate": [
+      128,
+      128,
+      128,
+      128,
+      128,
+      128,
+      128,
+      128,
+      128,
+      128
+    ],
+    "suffix": [
+      "mp3",
+      "mp3",
+      "mp3",
+      "mp3",
+      "mp3",
+      "mp3",
+      "mp3",
+      "mp3",
+      "mp3",
+      "mp3"
+    ],
+    "coverArt": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  }
+}

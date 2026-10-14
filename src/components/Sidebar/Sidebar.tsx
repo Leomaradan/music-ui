@@ -29,6 +29,7 @@ import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
 import InputBase from '@mui/material/InputBase';
 import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
@@ -136,7 +137,7 @@ export default function Sidebar() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <List dense disablePadding>
-        <DropHighlight active={dropTarget === 'queue'}>
+        <DropHighlight component="li" active={dropTarget === 'queue'}>
           <ListItemButton
             selected={activeView === 'queue'}
             onClick={() => show('queue')}
@@ -153,12 +154,14 @@ export default function Sidebar() {
             )}
           </ListItemButton>
         </DropHighlight>
-        <ListItemButton selected={activeView === 'filter'} onClick={() => show('filter')}>
-          <ListItemIcon>
-            <FilterListIcon />
-          </ListItemIcon>
-          <ListItemText primary="Filter results" />
-        </ListItemButton>
+        <li>
+          <ListItemButton selected={activeView === 'filter'} onClick={() => show('filter')}>
+            <ListItemIcon>
+              <FilterListIcon />
+            </ListItemIcon>
+            <ListItemText primary="Filter results" />
+          </ListItemButton>
+        </li>
       </List>
       <Divider />
       <ListSubheader
@@ -291,9 +294,19 @@ export default function Sidebar() {
   );
 }
 
-function DropHighlight({ active, children }: { active: boolean; children: ReactNode }) {
+function DropHighlight({
+  active,
+  component = 'div',
+  children,
+}: {
+  active: boolean;
+  /** "li" when it is the list item itself. */
+  component?: 'div' | 'li';
+  children: ReactNode;
+}) {
   return (
     <Box
+      component={component}
       sx={{
         outline: active ? 2 : 0,
         outlineColor: 'primary.main',
@@ -330,8 +343,15 @@ function SortablePlaylist({
     disabled: renaming,
   });
 
+  const icon = (
+    <ListItemIcon>
+      {playlist.readonly ? <LockIcon fontSize="small" /> : <PlaylistIcon fontSize="small" />}
+    </ListItemIcon>
+  );
+
   return (
     <Box
+      component="li"
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
       sx={{
@@ -341,34 +361,35 @@ function SortablePlaylist({
       }}
     >
       <DropHighlight active={dropActive}>
-        <ListItemButton
-          selected={selected}
-          onClick={onOpen}
-          onDoubleClick={() => void usePlaylistStore.getState().play(playlist.id)}
-          onContextMenu={onContextMenu}
-          {...attributes}
-          {...listeners}
-          {...dropProps}
-          aria-roledescription="playlist"
-          sx={{ cursor: isDragging ? 'grabbing' : undefined }}
-        >
-          <ListItemIcon>
-            {playlist.readonly ? <LockIcon fontSize="small" /> : <PlaylistIcon fontSize="small" />}
-          </ListItemIcon>
-          {renaming ? (
+        {renaming ? (
+          // Not a button while renaming: a text field inside a button is unusable for assistive
+          // technologies (nested interactive controls).
+          <ListItem component="div" dense>
+            {icon}
             <RenameField playlist={playlist} />
-          ) : (
+          </ListItem>
+        ) : (
+          <ListItemButton
+            selected={selected}
+            onClick={onOpen}
+            onDoubleClick={() => void usePlaylistStore.getState().play(playlist.id)}
+            onContextMenu={onContextMenu}
+            {...attributes}
+            {...listeners}
+            {...dropProps}
+            aria-roledescription="playlist"
+            sx={{ cursor: isDragging ? 'grabbing' : undefined }}
+          >
+            {icon}
             <ListItemText
               primary={playlist.name}
               slotProps={{ primary: { noWrap: true, title: playlist.name } }}
             />
-          )}
-          {!renaming && (
             <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
               {formatCount(playlist.songCount)}
             </Typography>
-          )}
-        </ListItemButton>
+          </ListItemButton>
+        )}
       </DropHighlight>
     </Box>
   );

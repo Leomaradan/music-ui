@@ -180,7 +180,7 @@ function LibraryTab() {
       <Box>
         <Button
           variant="outlined"
-          startIcon={syncing ? <CircularProgress size={16} /> : <SyncIcon />}
+          startIcon={syncing ? <CircularProgress size={16} aria-hidden /> : <SyncIcon />}
           disabled={syncing || status === null}
           onClick={() => void rescan()}
         >

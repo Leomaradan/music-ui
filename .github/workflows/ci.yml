@@ -26,10 +26,21 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Install Chromium (story tests)
+        run: pnpm exec playwright install --with-deps chromium
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
+      # Unit tests (jsdom) and story tests (Storybook play functions + a11y, in Chromium).
       - run: pnpm test
+      - name: Story test failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: story-screenshots
+          path: '**/__screenshots__/**'
+          if-no-files-found: ignore
+      - run: pnpm build-storybook
       - run: pnpm build
 
   integration:

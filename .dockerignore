@@ -5,6 +5,7 @@
 node_modules
 .next
 coverage
+storybook-static
 data
 docker
 unraid
