@@ -194,35 +194,44 @@ const APP_ICON_ATTRIBUTES = ['href', 'type', 'sizes'] as const;
  * added when the page has none, and removed again on restore.
  */
 export function setFavicon(href: string | null): void {
-  let links = [...document.head.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]')];
-  if (href && links.length === 0) {
-    const link = document.createElement('link');
-    link.rel = 'icon';
-    link.dataset.coverFavicon = '';
-    document.head.append(link);
-    links = [link];
-  }
+  const links = [...document.head.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]')];
+  if (href && links.length === 0) links.push(addCoverLink());
   for (const link of links) {
-    if (link.dataset.coverFavicon !== undefined) {
-      if (href) link.href = href;
-      else link.remove();
-      continue;
-    }
-    const saved = link.dataset.appHref !== undefined;
-    if (href) {
-      for (const name of APP_ICON_ATTRIBUTES) {
-        if (!saved) link.setAttribute(`data-app-${name}`, link.getAttribute(name) ?? '');
-        if (name !== 'href') link.removeAttribute(name);
-      }
-      link.setAttribute('href', href);
-    } else if (saved) {
-      for (const name of APP_ICON_ATTRIBUTES) {
-        const value = link.getAttribute(`data-app-${name}`);
-        if (value) link.setAttribute(name, value);
-        else link.removeAttribute(name);
-        link.removeAttribute(`data-app-${name}`);
-      }
-    }
+    if (link.dataset.coverFavicon !== undefined) setCoverLink(link, href);
+    else if (href) showCover(link, href);
+    else restoreAppIcon(link);
+  }
+}
+
+function addCoverLink(): HTMLLinkElement {
+  const link = document.createElement('link');
+  link.rel = 'icon';
+  link.dataset.coverFavicon = '';
+  document.head.append(link);
+  return link;
+}
+
+function setCoverLink(link: HTMLLinkElement, href: string | null): void {
+  if (href) link.href = href;
+  else link.remove();
+}
+
+function showCover(link: HTMLLinkElement, href: string): void {
+  const saved = link.dataset.appHref !== undefined;
+  for (const name of APP_ICON_ATTRIBUTES) {
+    if (!saved) link.setAttribute(`data-app-${name}`, link.getAttribute(name) ?? '');
+    if (name !== 'href') link.removeAttribute(name);
+  }
+  link.setAttribute('href', href);
+}
+
+function restoreAppIcon(link: HTMLLinkElement): void {
+  if (link.dataset.appHref === undefined) return;
+  for (const name of APP_ICON_ATTRIBUTES) {
+    const value = link.getAttribute(`data-app-${name}`);
+    if (value) link.setAttribute(name, value);
+    else link.removeAttribute(name);
+    link.removeAttribute(`data-app-${name}`);
   }
 }
 
