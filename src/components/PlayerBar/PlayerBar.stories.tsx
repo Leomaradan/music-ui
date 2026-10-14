@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { expect, waitFor, within } from 'storybook/test';
+import { expect, screen, waitFor, within } from 'storybook/test';
 import { usePlayerStore } from '@/client/stores/playerStore';
+import { useUiStore } from '@/client/stores/uiStore';
 import PlayerHost from '@/components/PlayerHost/PlayerHost';
-import { fakeApi, titleOf, trackByTitle } from '../../../tests/helpers/stories';
+import { fakeApi, phoneLayout, titleOf, trackByTitle } from '../../../tests/helpers/stories';
 import PlayerBar from './PlayerBar';
 
 /**
@@ -154,5 +155,25 @@ export const PlaybackError: Story = {
   },
   play: async ({ canvasElement }) => {
     expect(within(canvasElement).getByText(/The track is unavailable/)).toBeVisible();
+  },
+};
+
+/** Phone layout: play/pause and next stay in view; previous, stop and settings are in ⋮. */
+export const Phone: Story = {
+  beforeEach: () => {
+    usePlayerStore.getState().playQueue(ids('Walk This Way', 'Sweet Emotion'), 0);
+    return phoneLayout();
+  },
+  play: async ({ canvasElement, userEvent }) => {
+    expect(await within(canvasElement).findByText('Walk This Way')).toBeInTheDocument();
+    expect(button(canvasElement, 'Next')).toBeEnabled();
+    expect(within(canvasElement).queryByRole('slider', { name: 'Volume' })).toBeNull();
+
+    await userEvent.click(button(canvasElement, 'Open navigation'));
+    expect(useUiStore.getState().navOpen).toBe(true);
+
+    await userEvent.click(button(canvasElement, 'More player actions'));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Settings' }));
+    expect(useUiStore.getState().settings).toBe('library');
   },
 };

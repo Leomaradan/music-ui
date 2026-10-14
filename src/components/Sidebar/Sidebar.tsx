@@ -47,10 +47,12 @@ import PlaylistIcon from '@mui/icons-material/QueueMusicOutlined';
 import QueueMusicIcon from '@mui/icons-material/QueueMusic';
 import { droppedName, droppedTracks, endTrackDrag, isTrackDrag } from '@/client/dnd';
 import { formatCount } from '@/client/format';
+import { useIsMobile } from '@/client/hooks';
 import { usePlayerStore } from '@/client/stores/playerStore';
 import { freePlaylistName, usePlaylistStore } from '@/client/stores/playlistStore';
 import { notify } from '@/client/stores/notificationStore';
 import { useSelectionStore } from '@/client/stores/selectionStore';
+import { useUiStore } from '@/client/stores/uiStore';
 import {
   playlistOfView,
   useViewStore,
@@ -59,6 +61,8 @@ import {
 } from '@/client/stores/viewStore';
 import type { PlaylistSummary } from '@/lib/playlists/types';
 import SmartPlaylists from './SmartPlaylists';
+
+const NO_SENSORS: ReturnType<typeof useSensors> = [];
 
 /** Where tracks can be dropped: the queue, a playlist, or the "new playlist" zone. */
 type DropKey = 'queue' | 'new' | `playlist:${string}`;
@@ -77,15 +81,22 @@ export default function Sidebar() {
   const [menu, setMenu] = useState<{ top: number; left: number; id: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<PlaylistSummary | null>(null);
 
+  // Phones have no drag and drop: no reordering, no drop targets (the table's menus add tracks).
+  const isMobile = useIsMobile();
+
   const show = (view: ActiveView) => {
     if (view !== activeView) useSelectionStore.getState().clear();
     useViewStore.getState().setActiveView(view);
+    // On phones the sidebar is a drawer: choosing an entry shows it.
+    useUiStore.getState().setNavOpen(false);
     const id = playlistOfView(view);
     if (id) void usePlaylistStore.getState().loadTracks(id);
   };
 
   /** Native drop-target handlers for tracks dragged from the table. */
-  const dropTargetProps = (key: DropKey, accepts: boolean) => ({
+  const dropTargetProps = (key: DropKey, accepts: boolean) =>
+    isMobile ? {} : desktopDropTargetProps(key, accepts);
+  const desktopDropTargetProps = (key: DropKey, accepts: boolean) => ({
     onDragOver: (event: DragEvent) => {
       if (!accepts || !isTrackDrag(event.dataTransfer)) return;
       event.preventDefault();
@@ -120,11 +131,12 @@ export default function Sidebar() {
     },
   });
 
-  const sensors = useSensors(
+  const desktopSensors = useSensors(
     // A small move is needed to start dragging, so clicks still select.
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
+  const sensors = isMobile ? NO_SENSORS : desktopSensors;
   const onSortEnd = ({ active, over }: DragEndEvent) => {
     if (!over || active.id === over.id) return;
     const ids = playlists.map((p) => p.id);
@@ -183,28 +195,30 @@ export default function Sidebar() {
         </Tooltip>
       </ListSubheader>
 
-      <Box
-        role="region"
-        aria-label="New playlist drop zone"
-        {...dropTargetProps('new', true)}
-        sx={{
-          flex: 'none',
-          mx: 1,
-          mb: 1,
-          px: 1.5,
-          py: 1,
-          borderRadius: 1,
-          border: 1,
-          borderStyle: 'dashed',
-          borderColor: dropTarget === 'new' ? 'primary.main' : 'divider',
-          bgcolor: dropTarget === 'new' ? 'action.hover' : 'transparent',
-          color: 'text.secondary',
-          typography: 'caption',
-          textAlign: 'center',
-        }}
-      >
-        Drop tracks here to create a playlist
-      </Box>
+      {!isMobile && (
+        <Box
+          role="region"
+          aria-label="New playlist drop zone"
+          {...dropTargetProps('new', true)}
+          sx={{
+            flex: 'none',
+            mx: 1,
+            mb: 1,
+            px: 1.5,
+            py: 1,
+            borderRadius: 1,
+            border: 1,
+            borderStyle: 'dashed',
+            borderColor: dropTarget === 'new' ? 'primary.main' : 'divider',
+            bgcolor: dropTarget === 'new' ? 'action.hover' : 'transparent',
+            color: 'text.secondary',
+            typography: 'caption',
+            textAlign: 'center',
+          }}
+        >
+          Drop tracks here to create a playlist
+        </Box>
+      )}
       {/* Only the playlists scroll: the entries above and the drop zone stay in view. */}
       <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
         <DndContext

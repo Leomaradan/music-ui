@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
-import { expect, waitFor, within } from 'storybook/test';
+import { expect, screen, waitFor, within } from 'storybook/test';
 import { usePlayerStore } from '@/client/stores/playerStore';
+import { useViewStore } from '@/client/stores/viewStore';
 import { dragAndDrop } from '../../../tests/helpers/dnd';
-import { fakeApi, titleOf } from '../../../tests/helpers/stories';
+import { fakeApi, phoneLayout, titleOf } from '../../../tests/helpers/stories';
 import AppShell from './AppShell';
 
 /** The whole app against the fake API: the scenarios that cross components. */
@@ -107,5 +108,39 @@ export const DragRowsToPlaylist: Story = {
         'Stella by Starlight (Live)',
       ]),
     );
+  },
+};
+
+/**
+ * Phone layout: the sidebar opens from the menu button and closes once a list is chosen;
+ * the filters open full screen, one box per tab, where taps add values.
+ */
+export const Phone: Story = {
+  beforeEach: phoneLayout,
+  play: async ({ canvasElement, userEvent }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() => expect(rows(canvasElement)).toHaveLength(10), { timeout: 5_000 });
+    // No filter boxes and no sidebar on the page itself.
+    expect(canvas.queryByRole('listbox', { name: 'Genre' })).toBeNull();
+    expect(canvas.queryByRole('navigation')).toBeNull();
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Open navigation' }));
+    const nav = await screen.findByRole('navigation');
+    await userEvent.click(await within(nav).findByRole('button', { name: /Road trip/ }));
+    expect(useViewStore.getState().activeView).toBe('playlist:p1');
+    await waitFor(() => expect(screen.queryByRole('navigation')).toBeNull());
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Filters' }));
+    const dialog = within(await screen.findByRole('dialog', { name: 'Filters' }));
+    await userEvent.click(dialog.getByRole('tab', { name: 'Genre' }));
+    const genre = within(dialog.getByRole('listbox', { name: 'Genre' }));
+    await userEvent.click(genre.getByRole('option', { name: /^Rock/ }));
+    await userEvent.click(genre.getByRole('option', { name: /^Jazz/ }));
+    expect(dialog.getByRole('tab', { name: 'Genre (2)' })).toBeInTheDocument();
+    await userEvent.click(dialog.getByRole('button', { name: 'Show 6 tracks' }));
+
+    expect(useViewStore.getState().activeView).toBe('filter');
+    await waitFor(() => expect(rows(canvasElement)).toHaveLength(6));
+    expect(canvas.getByText('1 in use')).toBeInTheDocument();
   },
 };

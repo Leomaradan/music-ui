@@ -7,7 +7,13 @@ import { useFilterStore } from '@/client/stores/filterStore';
 import { usePlayerStore } from '@/client/stores/playerStore';
 import { usePlaylistStore } from '@/client/stores/playlistStore';
 import { useViewStore } from '@/client/stores/viewStore';
-import { sampleCatalog, titleOf, trackByTitle } from '../../../tests/helpers/stories';
+import {
+  fakeApi,
+  phoneLayout,
+  sampleCatalog,
+  titleOf,
+  trackByTitle,
+} from '../../../tests/helpers/stories';
 import TrackTable from './TrackTable';
 
 const meta = {
@@ -236,5 +242,81 @@ export const WaitingForFirstSync: Story = {
     await expect(
       within(canvasElement).getByText(/Waiting for the first library sync/),
     ).toBeInTheDocument();
+  },
+};
+
+/** The row menu also queues tracks and adds them to playlists (no drag and drop needed). */
+export const MenuActions: Story = {
+  beforeEach: async () => {
+    await usePlaylistStore.getState().load();
+    usePlayerStore.getState().playQueue([trackByTitle('Dancing Queen').id], 0);
+  },
+  play: async ({ canvasElement, userEvent }) => {
+    await waitFor(() => expect(rows(canvasElement)).toHaveLength(10));
+    await userEvent.click(rows(canvasElement)[2]!);
+    await userEvent.keyboard('{Control>}');
+    await userEvent.click(rows(canvasElement)[3]!);
+    await userEvent.keyboard('{/Control}');
+    await userEvent.pointer({ keys: '[MouseRight]', target: rows(canvasElement)[2]! });
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Play next' }));
+    expect(usePlayerStore.getState().queue.map(titleOf)).toEqual([
+      'Dancing Queen',
+      'Walk This Way',
+      'Sweet Emotion',
+    ]);
+
+    await userEvent.pointer({ keys: '[MouseRight]', target: rows(canvasElement)[2]! });
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Add to queue' }));
+    expect(usePlayerStore.getState().queue).toHaveLength(5);
+
+    await userEvent.pointer({ keys: '[MouseRight]', target: rows(canvasElement)[2]! });
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Add to playlist…' }));
+    const picker = within(await screen.findByRole('menu', { name: 'Add to playlist' }));
+    // Read-only playlists are not offered.
+    expect(picker.queryByRole('menuitem', { name: 'Shared' })).toBeNull();
+    await userEvent.click(picker.getByRole('menuitem', { name: 'Road trip' }));
+    await waitFor(() => expect(fakeApi().sent('PATCH', '/api/playlists/p1')).toHaveLength(1));
+    expect(fakeApi().sent('PATCH', '/api/playlists/p1')[0]?.body).toEqual({
+      add: [trackByTitle('Walk This Way').id, trackByTitle('Sweet Emotion').id],
+    });
+  },
+};
+
+const phoneSelected = (canvas: HTMLElement) =>
+  rows(canvas)
+    .filter((row) => row.getAttribute('aria-selected') === 'true')
+    .map((row) => row.querySelector('td p')?.textContent);
+
+/**
+ * Phone layout: two-line rows, no drag. A tap plays; the ⋮ button selects the row and opens
+ * its menu; with rows selected, taps add or remove rows and a bar acts on them.
+ */
+export const Phone: Story = {
+  beforeEach: phoneLayout,
+  play: async ({ canvasElement, userEvent }) => {
+    await waitFor(() => expect(rows(canvasElement)).toHaveLength(10));
+    const walk = rows(canvasElement)[2]!;
+    expect(walk).toHaveTextContent('Walk This WayAerosmith · Toys in the Attic');
+    expect(walk).not.toHaveAttribute('draggable', 'true');
+
+    await userEvent.click(walk);
+    expect(usePlayerStore.getState().queue.map(titleOf)[2]).toBe('Walk This Way');
+    expect(usePlayerStore.getState().index).toBe(2);
+
+    await userEvent.click(
+      within(walk).getByRole('button', { name: 'More actions for Walk This Way' }),
+    );
+    await userEvent.keyboard('{Escape}');
+    expect(phoneSelected(canvasElement)).toEqual(['Walk This Way']);
+    await userEvent.click(rows(canvasElement)[3]!);
+    expect(phoneSelected(canvasElement)).toEqual(['Walk This Way', 'Sweet Emotion']);
+
+    const bar = within(within(canvasElement).getByRole('toolbar', { name: 'Selected tracks' }));
+    expect(bar.getByText('2 selected')).toBeInTheDocument();
+    const before = usePlayerStore.getState().queue.length;
+    await userEvent.click(bar.getByRole('button', { name: 'Add to queue' }));
+    expect(usePlayerStore.getState().queue).toHaveLength(before + 2);
+    await userEvent.click(bar.getByRole('button', { name: 'Clear selection' }));
+    expect(within(canvasElement).queryByRole('toolbar', { name: 'Selected tracks' })).toBeNull();
   },
 };

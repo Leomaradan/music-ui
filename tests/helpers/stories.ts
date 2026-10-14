@@ -123,3 +123,28 @@ export async function resetApp(parameters: AppParameters = {}): Promise<() => vo
     current = null;
   };
 }
+
+/**
+ * Renders the phone layout (PLAN.md §7.6) whatever the browser size: `useIsMobile` reads MUI's
+ * `md` breakpoint through `matchMedia`, which this answers as a narrow screen. Returns the
+ * cleanup (use it as a story's `beforeEach`).
+ */
+export function phoneLayout(): () => void {
+  const original = window.matchMedia;
+  window.matchMedia = (query: string) => {
+    if (!/max-width:\s*899\.95px/.test(query)) return original.call(window, query);
+    return {
+      matches: true,
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    } as MediaQueryList;
+  };
+  return () => {
+    window.matchMedia = original;
+  };
+}

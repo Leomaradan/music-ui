@@ -155,6 +155,14 @@ describe('playerStore', () => {
     expect(player()).toMatchObject({ index: 0, status: 'loading' });
   });
 
+  it('inserts "play next" tracks after the current one', () => {
+    player().playNext(['x']);
+    expect(player().queue).toEqual(['x']);
+    player().playQueue(['a', 'b', 'c'], 1);
+    player().playNext(['x', 'y']);
+    expect(player()).toMatchObject({ queue: ['a', 'b', 'x', 'y', 'c'], index: 1 });
+  });
+
   it('removes queue entries, moving to the next track if the current one goes', () => {
     player().playQueue(['a', 'b', 'c', 'd'], 1);
     player().reportStatus('playing');

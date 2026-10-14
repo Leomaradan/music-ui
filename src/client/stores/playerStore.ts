@@ -64,6 +64,8 @@ interface PlayerState {
   /** Jumps to a queue entry (plays it, or only selects it with `autoplay: false`). */
   playIndex(index: number, autoplay?: boolean): void;
   enqueue(trackIds: string[]): void;
+  /** Inserts tracks right after the current one (appends when nothing plays). */
+  playNext(trackIds: string[]): void;
   removeFromQueue(indexes: Iterable<number>): void;
   play(): void;
   pause(): void;
@@ -190,6 +192,13 @@ export const usePlayerStore = create<PlayerState>()((set, get) => {
 
     enqueue(trackIds) {
       set({ queue: [...get().queue, ...trackIds] });
+      preloadNext();
+    },
+
+    playNext(trackIds) {
+      const { queue, index } = get();
+      if (index < 0) return get().enqueue(trackIds);
+      set({ queue: [...queue.slice(0, index + 1), ...trackIds, ...queue.slice(index + 1)] });
       preloadNext();
     },
 
