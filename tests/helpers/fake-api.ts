@@ -1,4 +1,5 @@
 import type { CatalogSnapshot } from '@/lib/catalog/snapshot';
+import type { DynamicPlaylist } from '@/lib/dynamicPlaylists/types';
 import type { PlaylistDetail, PlaylistSummary } from '@/lib/playlists/types';
 
 /**
@@ -31,6 +32,8 @@ export interface FakeApiOptions {
   queue?: { ids: string[]; index: number; position: number };
   /** Signed-in user reported by /api/auth/me (login disabled when omitted). */
   user?: string;
+  /** Smart playlists served by /api/dynamic-playlists. */
+  dynamicPlaylists?: DynamicPlaylist[];
 }
 
 export class FakeApi {
@@ -40,6 +43,7 @@ export class FakeApi {
   queue: { ids: string[]; index: number; position: number };
   syncState: 'idle' | 'syncing' = 'idle';
   user: string | null;
+  dynamicPlaylists: DynamicPlaylist[];
   private nextId = 1;
 
   constructor(options: FakeApiOptions = {}) {
@@ -47,6 +51,7 @@ export class FakeApi {
     this.playlists = structuredClone(options.playlists ?? []);
     this.queue = options.queue ?? { ids: [], index: -1, position: 0 };
     this.user = options.user ?? null;
+    this.dynamicPlaylists = structuredClone(options.dynamicPlaylists ?? []);
     for (const p of this.playlists) {
       const n = Number(/^p(\d+)$/.exec(p.id)?.[1] ?? 0);
       if (n >= this.nextId) this.nextId = n + 1;
@@ -129,6 +134,28 @@ export class FakeApi {
     }
     if (path === '/api/auth/logout' && method === 'POST') {
       return new Response(null, { status: 204 });
+    }
+    if (path === '/api/dynamic-playlists') {
+      if (method === 'POST') {
+        const playlist = { id: `d${this.nextId++}`, ...(body as Omit<DynamicPlaylist, 'id'>) };
+        this.dynamicPlaylists.push(playlist);
+        return Response.json(playlist, { status: 201 });
+      }
+      return Response.json({ playlists: this.dynamicPlaylists });
+    }
+    const dynamic = /^\/api\/dynamic-playlists\/([^/]+)$/.exec(path);
+    if (dynamic) {
+      const id = decodeURIComponent(dynamic[1]!);
+      if (!this.dynamicPlaylists.some((p) => p.id === id)) {
+        return Response.json({ error: 'No such dynamic playlist' }, { status: 404 });
+      }
+      if (method === 'DELETE') {
+        this.dynamicPlaylists = this.dynamicPlaylists.filter((p) => p.id !== id);
+        return new Response(null, { status: 204 });
+      }
+      const updated = { id, ...(body as Omit<DynamicPlaylist, 'id'>) };
+      this.dynamicPlaylists = this.dynamicPlaylists.map((p) => (p.id === id ? updated : p));
+      return Response.json(updated);
     }
     if (path === '/api/queue') {
       if (method === 'PUT') {

@@ -58,6 +58,7 @@ import {
   type ActiveView,
 } from '@/client/stores/viewStore';
 import type { PlaylistSummary } from '@/lib/playlists/types';
+import SmartPlaylists from './SmartPlaylists';
 
 /** Where tracks can be dropped: the queue, a playlist, or the "new playlist" zone. */
 type DropKey = 'queue' | 'new' | `playlist:${string}`;
@@ -163,6 +164,8 @@ export default function Sidebar() {
           </ListItemButton>
         </li>
       </List>
+      <Divider />
+      <SmartPlaylists activeView={activeView} onShow={show} />
       <Divider />
       <ListSubheader
         component="div"
