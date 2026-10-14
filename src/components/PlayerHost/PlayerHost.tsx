@@ -13,7 +13,7 @@ const player = () => usePlayerStore.getState();
 
 /**
  * Wires the player (PLAN.md §7.1): audio engine, queue persistence, Media Session (OS media
- * keys, lock screen), keyboard shortcuts and the document title. Renders nothing.
+ * keys, lock screen), keyboard shortcuts, the document title and the favicon. Renders nothing.
  */
 export default function PlayerHost() {
   useEffect(() => {
@@ -29,9 +29,11 @@ export default function PlayerHost() {
     const stopMediaSession = startMediaSession();
     const stopShortcuts = startShortcuts();
     const stopTitle = startDocumentTitle();
+    const stopFavicon = startFavicon();
     const stopResume = startResumeOnInteraction();
     return () => {
       stopResume();
+      stopFavicon();
       stopTitle();
       stopShortcuts();
       stopMediaSession();
@@ -176,6 +178,80 @@ function startDocumentTitle(): () => void {
     unsubscribePlayer();
     unsubscribeCatalog();
     document.title = APP_TITLE;
+  };
+}
+
+/** The current track's album cover, or null to keep the app icon. */
+export function faviconHref(track: { coverArt: string | null } | undefined): string | null {
+  return track?.coverArt ? `/api/cover/${encodeURIComponent(track.coverArt)}?size=64` : null;
+}
+
+const APP_ICON_ATTRIBUTES = ['href', 'type', 'sizes'] as const;
+
+/**
+ * Points the page's icon links (Next.js renders them from `app/icon.svg`) at `href`, or back
+ * at the app icon when null. Their original attributes are kept in `data-app-*`; a link is
+ * added when the page has none, and removed again on restore.
+ */
+export function setFavicon(href: string | null): void {
+  const links = [...document.head.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]')];
+  if (href && links.length === 0) links.push(addCoverLink());
+  for (const link of links) {
+    if (link.dataset.coverFavicon !== undefined) setCoverLink(link, href);
+    else if (href) showCover(link, href);
+    else restoreAppIcon(link);
+  }
+}
+
+function addCoverLink(): HTMLLinkElement {
+  const link = document.createElement('link');
+  link.rel = 'icon';
+  link.dataset.coverFavicon = '';
+  document.head.append(link);
+  return link;
+}
+
+function setCoverLink(link: HTMLLinkElement, href: string | null): void {
+  if (href) link.href = href;
+  else link.remove();
+}
+
+function showCover(link: HTMLLinkElement, href: string): void {
+  const saved = link.dataset.appHref !== undefined;
+  for (const name of APP_ICON_ATTRIBUTES) {
+    if (!saved) link.setAttribute(`data-app-${name}`, link.getAttribute(name) ?? '');
+    if (name !== 'href') link.removeAttribute(name);
+  }
+  link.setAttribute('href', href);
+}
+
+function restoreAppIcon(link: HTMLLinkElement): void {
+  if (link.dataset.appHref === undefined) return;
+  for (const name of APP_ICON_ATTRIBUTES) {
+    const value = link.getAttribute(`data-app-${name}`);
+    if (value) link.setAttribute(name, value);
+    else link.removeAttribute(name);
+    link.removeAttribute(`data-app-${name}`);
+  }
+}
+
+function startFavicon(): () => void {
+  let last: string | null = null;
+  const update = () => {
+    const trackId = selectCurrentTrackId(player());
+    const catalog = useCatalogStore.getState().catalog;
+    const href = faviconHref(trackId && catalog ? tracksById(catalog).get(trackId) : undefined);
+    if (href === last) return;
+    last = href;
+    setFavicon(href);
+  };
+  update();
+  const unsubscribePlayer = usePlayerStore.subscribe(update);
+  const unsubscribeCatalog = useCatalogStore.subscribe(update);
+  return () => {
+    unsubscribePlayer();
+    unsubscribeCatalog();
+    setFavicon(null);
   };
 }
 

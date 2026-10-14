@@ -8,7 +8,7 @@ import { usePlayerStore } from '@/client/stores/playerStore';
 import { useUiStore } from '@/client/stores/uiStore';
 import { useViewStore } from '@/client/stores/viewStore';
 import AppShell from '@/components/AppShell/AppShell';
-import { documentTitle } from '@/components/PlayerHost/PlayerHost';
+import { documentTitle, faviconHref, setFavicon } from '@/components/PlayerHost/PlayerHost';
 import theme from '@/theme/theme';
 
 const initialPlayer = usePlayerStore.getState();
@@ -143,5 +143,42 @@ describe('documentTitle', () => {
       '▶ Dancing Queen — ABBA · Music UI',
     );
     expect(documentTitle({ title: 'Untitled', artist: '' }, false)).toBe('Untitled · Music UI');
+  });
+});
+
+const icons = () => [...document.head.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]')];
+
+describe('favicon', () => {
+  afterEach(() => document.head.querySelectorAll('link').forEach((link) => link.remove()));
+
+  it('uses the album cover of the current track', () => {
+    expect(faviconHref(undefined)).toBeNull();
+    expect(faviconHref({ coverArt: null })).toBeNull();
+    expect(faviconHref({ coverArt: 'al 1' })).toBe('/api/cover/al%201?size=64');
+  });
+
+  it('swaps the app icon for the cover, then restores it', () => {
+    document.head.insertAdjacentHTML(
+      'beforeend',
+      '<link rel="icon" href="/icon.svg?123" type="image/svg+xml" sizes="any">',
+    );
+    setFavicon('/api/cover/a?size=64');
+    setFavicon('/api/cover/b?size=64');
+    expect(icons()).toHaveLength(1);
+    expect(icons()[0]!.getAttribute('href')).toBe('/api/cover/b?size=64');
+    expect(icons()[0]!.hasAttribute('type')).toBe(false);
+    expect(icons()[0]!.hasAttribute('sizes')).toBe(false);
+
+    setFavicon(null);
+    expect(icons()[0]!.outerHTML).toBe(
+      '<link rel="icon" href="/icon.svg?123" type="image/svg+xml" sizes="any">',
+    );
+  });
+
+  it('adds its own link when the page has none', () => {
+    setFavicon('/api/cover/a?size=64');
+    expect(icons().map((link) => link.getAttribute('href'))).toEqual(['/api/cover/a?size=64']);
+    setFavicon(null);
+    expect(icons()).toHaveLength(0);
   });
 });
