@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box';
 import Divider from '@mui/material/Divider';
 import CatalogLoader from '@/components/CatalogLoader/CatalogLoader';
+import DynamicPlaylistDialog from '@/components/DynamicPlaylistDialog/DynamicPlaylistDialog';
 import Filters from '@/components/Filters/Filters';
 import Notifier from '@/components/Notifier/Notifier';
 import PlayerBar from '@/components/PlayerBar/PlayerBar';
@@ -30,6 +31,7 @@ export default function AppShell() {
       <PlayerHost />
       <Notifier />
       <SettingsDialog />
+      <DynamicPlaylistDialog />
       <Box sx={{ gridArea: 'player' }}>
         <PlayerBar />
       </Box>

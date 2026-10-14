@@ -36,7 +36,12 @@ import { useFilterStore } from '@/client/stores/filterStore';
 import { selectCurrentTrackId, usePlayerStore } from '@/client/stores/playerStore';
 import { usePlaylistStore } from '@/client/stores/playlistStore';
 import { useSelectionStore } from '@/client/stores/selectionStore';
-import { playlistOfView, useViewStore, type SortEntry } from '@/client/stores/viewStore';
+import {
+  dynamicOfView,
+  playlistOfView,
+  useViewStore,
+  type SortEntry,
+} from '@/client/stores/viewStore';
 import { columns, features } from './columns';
 
 export const ROW_HEIGHT = 32;
@@ -80,8 +85,10 @@ export default function TrackTable() {
   const playlistLoading = usePlaylistStore((state) =>
     playlistId ? state.tracks[playlistId] === undefined : false,
   );
+  /** Computed by a smart playlist: sortable like the filter results, but nothing to remove. */
+  const isDynamic = dynamicOfView(view) !== null;
   /** The queue and playlists keep their own order: no sorting, positional row ids. */
-  const isOrdered = view !== 'filter';
+  const isOrdered = isQueue || playlistId !== null;
 
   const getRowId = useCallback(
     (track: Track, index: number) => (isOrdered ? positionRowId(index) : track.id),
@@ -130,7 +137,7 @@ export default function TrackTable() {
   const isPlaying = playbackStatus === 'playing' || playbackStatus === 'loading';
 
   const hasSelection = selection.ids.size > 0;
-  const canRemove = hasSelection && !(playlistId && playlistReadonly);
+  const canRemove = hasSelection && !isDynamic && !(playlistId && playlistReadonly);
   const removeSelected = () => {
     setMenu(null);
     if (!canRemove) return;
@@ -347,17 +354,15 @@ export default function TrackTable() {
           </ListItemIcon>
           Play
         </MenuItem>
-        <MenuItem onClick={removeSelected} disabled={!canRemove}>
-          <ListItemIcon>
-            <RemoveIcon fontSize="small" />
-          </ListItemIcon>
-          {isQueue
-            ? 'Remove from queue'
-            : playlistId
-              ? 'Remove from playlist'
-              : 'Remove from results'}
-          {selection.ids.size > 1 ? ` (${selection.ids.size})` : ''}
-        </MenuItem>
+        {!isDynamic && (
+          <MenuItem onClick={removeSelected} disabled={!canRemove}>
+            <ListItemIcon>
+              <RemoveIcon fontSize="small" />
+            </ListItemIcon>
+            {removeLabel(isQueue, playlistId !== null)}
+            {selection.ids.size > 1 ? ` (${selection.ids.size})` : ''}
+          </MenuItem>
+        )}
       </Menu>
     </Box>
   );
@@ -454,11 +459,18 @@ const TrackRow = memo(function TrackRow({
   );
 });
 
+function removeLabel(isQueue: boolean, isPlaylist: boolean): string {
+  if (isQueue) return 'Remove from queue';
+  if (isPlaylist) return 'Remove from playlist';
+  return 'Remove from results';
+}
+
 function EmptyState({ view, loading }: { view: string; loading: boolean }) {
   const status = useCatalogStore((state) => state.status);
   const error = useCatalogStore((state) => state.error);
   let content: React.ReactNode;
   if (view === 'queue') content = 'The queue is empty. Double-click a track to play it.';
+  else if (view.startsWith('dynamic:')) content = 'No tracks match this smart playlist.';
   else if (view !== 'filter')
     content = loading ? (
       <CircularProgress size={24} aria-label="Loading playlist" />

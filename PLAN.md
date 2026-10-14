@@ -160,6 +160,8 @@ Only one sync runs at a time (in-process lock). Progress is available at `/api/c
 | `/api/auth/login` | POST | `{username, password}` → session cookie (204), 401 on a wrong password, 429 after 5 failures in 15 min (per client address + username) |
 | `/api/auth/logout` | POST | Ends the session, clears the cookie |
 | `/api/auth/me` | GET | `{enabled, username}` (Settings shows "Signed in as …") |
+| `/api/dynamic-playlists` | GET / POST | List the smart playlists / create one from `{name, match, criteria}` (§7.2b) |
+| `/api/dynamic-playlists/[id]` | PUT / DELETE | Replace a smart playlist's definition / delete it |
 
 All routes use the Node runtime and are dynamic. Ids are validated with zod.
 
@@ -239,6 +241,14 @@ Values of the filter boxes can be dragged too (except *All*): the dragged value,
 
 The **filter boxes are always visible**, whichever sidebar item is selected. When "Currently playing" or a custom playlist is shown, the boxes keep displaying the current filter state but do not filter that list. **Changing any filter switches the view to "Filter results".**
 
+### 7.2b Smart (dynamic) playlists
+A smart playlist is a name, a list of **criteria** and a **match** mode: `all` (every criterion) or `any` (at least one).
+- A criterion is `{field, op, value}`. Fields: `genre`, `artist` (album artist, like the Artist filter), `trackArtist`, `album`, `year`, `folder` (library name), `format` (file suffix).
+- `==` is the default; `!=` is its opposite. The year also accepts `<`, `<=`, `>`, `>=`. Text compares without case or accents. With several genres, `==` needs one of them and `!=` none. A track without a year only matches `!=`.
+- **Stored by the app** (`app_state`, key `dynamicPlaylists`), not in Navidrome: Navidrome's own smart playlists (`.nsp` files) cannot be created through the API and need write access to the music folders.
+- **Evaluated in the browser** against the catalog (`src/client/catalog/dynamic.ts`), so every catalog version (each sync) updates them with no server work.
+- Sidebar section _Smart playlists_ (between _Filter results_ and the playlists): **+** opens the editor (live count of matching tracks), click lists the tracks (sortable like the filter results, nothing to remove), double-click plays them, context menu _Edit…_ / _Save as playlist_ (a Navidrome playlist with the current tracks) / _Delete…_. Not a drop target.
+
 ### 7.3 Filters (right, upper part)
 Four boxes in a row: **Music Folder → Genre → Artist → Album**.
 - The **Artist** box uses the **album artist** (`albumArtist` from §5), not the track artist. A compilation therefore appears under its album artist (for example "Various Artists"), and a "feat." track appears under the main album's artist.
@@ -272,6 +282,7 @@ Four boxes in a row: **Music Folder → Genre → Artist → Album**.
 | `selectionStore` | Selected rows and Shift-range anchor | Not persisted |
 | `playerStore` | Queue (track ids), index, state, position, volume | Navidrome play queue + localStorage |
 | `playlistStore` | Playlists, order, cached tracks | Server (`/api/playlists`) |
+| `dynamicPlaylistStore` | Smart playlist definitions, editor state | Server (`/api/dynamic-playlists`) |
 
 ---
 
@@ -433,6 +444,7 @@ Two Vitest projects (`vitest.config.ts`), both run by `pnpm test` and in CI:
 | # | Milestone | Done when |
 |---|---|---|
 | M12 | Login screen (§6b) | The UI and every API route except the healthcheck need a session; accounts are managed with `cli.mjs` in the container |
+| M13 | Smart playlists (§7.2b) | Criteria on tags with all/any; the lists follow each library sync |
 
 ---
 

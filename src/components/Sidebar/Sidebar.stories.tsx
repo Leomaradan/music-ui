@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, screen, waitFor, within } from 'storybook/test';
 import Box from '@mui/material/Box';
 import { endTrackDrag, startTrackDrag } from '@/client/dnd';
+import { useDynamicPlaylistStore } from '@/client/stores/dynamicPlaylistStore';
 import { usePlayerStore } from '@/client/stores/playerStore';
 import { usePlaylistStore } from '@/client/stores/playlistStore';
 import { useViewStore } from '@/client/stores/viewStore';
@@ -22,6 +23,7 @@ const meta = {
   // The playlists are loaded by CatalogLoader in the app.
   beforeEach: async () => {
     await usePlaylistStore.getState().load();
+    await useDynamicPlaylistStore.getState().load();
   },
 } satisfies Meta<typeof Sidebar>;
 
@@ -211,5 +213,66 @@ export const Reorder: Story = {
       ).toEqual(['Shared1', 'Road trip2']),
     );
     expect(fakeApi().sent('PUT', '/api/playlists/order')[0]?.body).toEqual({ ids: ['p2', 'p1'] });
+  },
+};
+
+const smartPlaylist = async (canvas: HTMLElement, name: RegExp) =>
+  within(await within(canvas).findByRole('list', { name: 'Smart playlists' })).getByRole('button', {
+    name,
+  });
+
+/** A smart playlist shows how many tracks match; a click lists them in the table. */
+export const OpenSmartPlaylist: Story = {
+  play: async ({ canvasElement, userEvent }) => {
+    const item = await smartPlaylist(canvasElement, /70s rock/);
+    expect(item).toHaveTextContent('70s rock3');
+    await userEvent.click(item);
+    expect(useViewStore.getState().activeView).toBe('dynamic:d1');
+  },
+};
+
+/** Double-click plays the matching tracks. */
+export const SmartPlaylistPlays: Story = {
+  play: async ({ canvasElement, userEvent }) => {
+    await userEvent.dblClick(await smartPlaylist(canvasElement, /70s rock/));
+    expect(usePlayerStore.getState().queue.map(titleOf)).toEqual([
+      'Walk This Way',
+      'Sweet Emotion',
+      'Back in the Saddle (Live)',
+    ]);
+  },
+};
+
+/** "+" opens the editor; the context menu edits, copies to a regular playlist, or deletes. */
+export const SmartPlaylistMenu: Story = {
+  play: async ({ canvasElement, userEvent }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole('button', { name: 'New smart playlist' }));
+    expect(useDynamicPlaylistStore.getState().editor).toMatchObject({ id: null });
+    useDynamicPlaylistStore.getState().closeEditor();
+
+    const item = await smartPlaylist(canvasElement, /70s rock/);
+    await userEvent.pointer({ keys: '[MouseRight]', target: item });
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit…' }));
+    expect(useDynamicPlaylistStore.getState().editor).toMatchObject({ id: 'd1' });
+    useDynamicPlaylistStore.getState().closeEditor();
+
+    await userEvent.pointer({ keys: '[MouseRight]', target: item });
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Save as playlist' }));
+    await waitFor(() => expect(fakeApi().sent('POST', '/api/playlists')).toHaveLength(1));
+    expect(fakeApi().sent('POST', '/api/playlists')[0]?.body).toEqual({
+      name: '70s rock',
+      trackIds: ['Walk This Way', 'Sweet Emotion', 'Back in the Saddle (Live)'].map(
+        (title) => trackByTitle(title).id,
+      ),
+    });
+
+    await userEvent.pointer({ keys: '[MouseRight]', target: item });
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Delete…' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Delete' }));
+    await waitFor(() =>
+      expect(canvas.queryByRole('list', { name: 'Smart playlists' })).not.toBeInTheDocument(),
+    );
+    expect(fakeApi().dynamicPlaylists).toEqual([]);
   },
 };

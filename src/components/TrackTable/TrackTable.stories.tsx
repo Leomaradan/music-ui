@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { expect, screen, waitFor, within } from 'storybook/test';
 import Box from '@mui/material/Box';
 import { useCatalogStore } from '@/client/stores/catalogStore';
+import { useDynamicPlaylistStore } from '@/client/stores/dynamicPlaylistStore';
 import { useFilterStore } from '@/client/stores/filterStore';
 import { usePlayerStore } from '@/client/stores/playerStore';
 import { usePlaylistStore } from '@/client/stores/playlistStore';
@@ -159,6 +160,55 @@ export const Playlist: Story = {
     await waitFor(() =>
       expect(titles(canvasElement)).toEqual(['Dancing Queen', 'Knowing Me, Knowing You']),
     );
+  },
+};
+
+/** A smart playlist lists the matching tracks: sortable, but nothing can be removed. */
+export const SmartPlaylist: Story = {
+  beforeEach: async () => {
+    await useDynamicPlaylistStore.getState().load();
+    useViewStore.getState().setActiveView('dynamic:d1');
+  },
+  play: async ({ canvasElement, userEvent }) => {
+    await waitFor(() =>
+      expect(titles(canvasElement)).toEqual([
+        'Walk This Way',
+        'Sweet Emotion',
+        'Back in the Saddle (Live)',
+      ]),
+    );
+    const header = within(grid(canvasElement)).getByRole('columnheader', { name: 'Title' });
+    await userEvent.click(within(header).getByRole('button'));
+    expect(titles(canvasElement)[0]).toBe('Back in the Saddle (Live)');
+
+    await userEvent.pointer({ keys: '[MouseRight]', target: rows(canvasElement)[0]! });
+    expect(await screen.findByRole('menuitem', { name: 'Play' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /Remove/ })).toBeNull();
+  },
+};
+
+/** A smart playlist without matches says so. */
+export const SmartPlaylistEmpty: Story = {
+  parameters: {
+    fakeApi: {
+      dynamicPlaylists: [
+        {
+          id: 'd1',
+          name: 'Nothing',
+          match: 'all',
+          criteria: [{ field: 'genre', op: '==', value: 'Polka' }],
+        },
+      ],
+    },
+  },
+  beforeEach: async () => {
+    await useDynamicPlaylistStore.getState().load();
+    useViewStore.getState().setActiveView('dynamic:d1');
+  },
+  play: async ({ canvasElement }) => {
+    expect(
+      await within(canvasElement).findByText('No tracks match this smart playlist.'),
+    ).toBeVisible();
   },
 };
 

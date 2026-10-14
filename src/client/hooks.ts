@@ -2,13 +2,15 @@
 
 import { useMemo } from 'react';
 import type { Track } from '@/client/catalog/decode';
+import { matchTracks } from '@/client/catalog/dynamic';
 import { getFacets, type Facets } from '@/client/catalog/facets';
 import { tracksById, unknownTrack } from '@/client/catalog/lookup';
 import { useCatalogStore } from '@/client/stores/catalogStore';
+import { useDynamicPlaylistStore } from '@/client/stores/dynamicPlaylistStore';
 import { useFilterStore } from '@/client/stores/filterStore';
 import { selectCurrentTrackId, usePlayerStore } from '@/client/stores/playerStore';
 import { usePlaylistStore } from '@/client/stores/playlistStore';
-import { playlistOfView, useViewStore } from '@/client/stores/viewStore';
+import { dynamicOfView, playlistOfView, useViewStore } from '@/client/stores/viewStore';
 
 const NO_TRACKS: Track[] = [];
 
@@ -41,6 +43,18 @@ function usePlaylistTracks(playlistId: string | null): Track[] {
   );
 }
 
+/** Tracks matching a dynamic playlist, recomputed when the catalog or the criteria change. */
+export function useDynamicTracks(id: string | null): Track[] {
+  const catalog = useCatalogStore((state) => state.catalog);
+  const playlist = useDynamicPlaylistStore((state) =>
+    id ? state.playlists.find((p) => p.id === id) : undefined,
+  );
+  return useMemo(
+    () => (catalog && playlist ? matchTracks(catalog.tracks, playlist) : NO_TRACKS),
+    [catalog, playlist],
+  );
+}
+
 /** Tracks listed by the table for the active sidebar entry, before sorting. */
 export function useTableTracks(): Track[] {
   const facets = useFacets();
@@ -48,14 +62,16 @@ export function useTableTracks(): Track[] {
   const excluded = useFilterStore((state) => state.excluded);
   const view = useViewStore((state) => state.activeView);
   const playlistTracks = usePlaylistTracks(playlistOfView(view));
+  const dynamicTracks = useDynamicTracks(dynamicOfView(view));
   return useMemo(() => {
     if (view === 'queue') return queueTracks;
     if (playlistOfView(view)) return playlistTracks;
+    if (dynamicOfView(view)) return dynamicTracks;
     if (!facets) return NO_TRACKS;
     if (excluded.length === 0) return facets.tracks;
     const hidden = new Set(excluded);
     return facets.tracks.filter((track) => !hidden.has(track.id));
-  }, [facets, queueTracks, playlistTracks, excluded, view]);
+  }, [facets, queueTracks, playlistTracks, dynamicTracks, excluded, view]);
 }
 
 /** The track being played (or paused), if any. */
