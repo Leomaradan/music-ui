@@ -29,6 +29,8 @@ export interface FakeApiOptions {
   playlists?: FakePlaylist[];
   /** Saved play queue served by GET /api/queue. */
   queue?: { ids: string[]; index: number; position: number };
+  /** Signed-in user reported by /api/auth/me (login disabled when omitted). */
+  user?: string;
 }
 
 export class FakeApi {
@@ -37,12 +39,14 @@ export class FakeApi {
   snapshot: CatalogSnapshot | null;
   queue: { ids: string[]; index: number; position: number };
   syncState: 'idle' | 'syncing' = 'idle';
+  user: string | null;
   private nextId = 1;
 
   constructor(options: FakeApiOptions = {}) {
     this.snapshot = options.snapshot ?? null;
     this.playlists = structuredClone(options.playlists ?? []);
     this.queue = options.queue ?? { ids: [], index: -1, position: 0 };
+    this.user = options.user ?? null;
     for (const p of this.playlists) {
       const n = Number(/^p(\d+)$/.exec(p.id)?.[1] ?? 0);
       if (n >= this.nextId) this.nextId = n + 1;
@@ -119,6 +123,12 @@ export class FakeApi {
         status: 'ok',
         subsonic: { reachable: true, server: 'navidrome 0.64.2' },
       });
+    }
+    if (path === '/api/auth/me') {
+      return Response.json({ enabled: this.user !== null, username: this.user });
+    }
+    if (path === '/api/auth/logout' && method === 'POST') {
+      return new Response(null, { status: 204 });
     }
     if (path === '/api/queue') {
       if (method === 'PUT') {

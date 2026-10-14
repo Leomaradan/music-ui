@@ -1,8 +1,7 @@
 import 'server-only';
-import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { AppStateRepository } from '@/lib/appState';
-import { openDatabase } from '@/lib/db';
+import { getDatabase } from '@/lib/database';
 import { getEnv } from '@/lib/env';
 import { createLogger } from '@/lib/logger';
 import { getSubsonicClient } from '@/lib/subsonic';
@@ -64,7 +63,7 @@ export function getCatalogService(): CatalogService {
   const globals = globalThis as Globals;
   if (!globals[SERVICE]) {
     const env = getEnv();
-    const db = openDatabase(join(env.DATA_DIR, 'music-ui.db'));
+    const db = getDatabase();
     const repository = new CatalogRepository(db);
     const sync = new CatalogSync({
       client: getSubsonicClient(),

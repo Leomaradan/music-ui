@@ -22,6 +22,7 @@ import Typography from '@mui/material/Typography';
 import { useColorScheme } from '@mui/material/styles';
 import SyncIcon from '@mui/icons-material/Sync';
 import { api } from '@/client/api';
+import { signOut } from '@/client/auth';
 import { formatCount, formatRelativeTime } from '@/client/format';
 import { SHORTCUTS } from '@/client/shortcuts';
 import { useCatalogStore } from '@/client/stores/catalogStore';
@@ -69,9 +70,34 @@ export default function SettingsDialog() {
         {tab === 'shortcuts' && <ShortcutsTab />}
       </DialogContent>
       <DialogActions>
+        {tab !== null && <Account />}
         <Button onClick={close}>Close</Button>
       </DialogActions>
     </Dialog>
+  );
+}
+
+/** "Signed in as …" and the sign-out button, when the login is enabled. */
+function Account() {
+  const [username, setUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    // State is only set once the server answers (fetching from an external system).
+    void api<{ enabled: boolean; username: string | null }>('/api/auth/me')
+      .then((me) => setUsername(me.enabled ? me.username : null))
+      .catch(() => setUsername(null));
+  }, []);
+
+  if (!username) return null;
+  return (
+    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mr: 'auto', pl: 2 }}>
+      <Typography variant="body2" color="text.secondary">
+        Signed in as <strong>{username}</strong>
+      </Typography>
+      <Button size="small" onClick={() => void signOut()}>
+        Sign out
+      </Button>
+    </Stack>
   );
 }
 

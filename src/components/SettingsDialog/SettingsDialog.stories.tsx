@@ -68,3 +68,22 @@ export const Shortcuts: Story = {
     expect(dialog().getByRole('tab', { selected: true })).toHaveTextContent('Library');
   },
 };
+
+/** With the login enabled, the dialog shows who is signed in and a sign-out button. */
+export const SignedIn: Story = {
+  parameters: { fakeApi: { user: 'alice' } },
+  play: async () => {
+    expect(await dialog().findByText('alice')).toBeInTheDocument();
+    expect(dialog().getByText(/Signed in as/)).toBeInTheDocument();
+    expect(dialog().getByRole('button', { name: 'Sign out' })).toBeEnabled();
+  },
+};
+
+/** Without the login (AUTH_ENABLED=false), there is no account section. */
+export const LoginDisabled: Story = {
+  play: async () => {
+    await dialog().findByText('Connected · navidrome 0.64.2');
+    await waitFor(() => expect(fakeApi().sent('GET', '/api/auth/me')).toHaveLength(1));
+    expect(dialog().queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument();
+  },
+};

@@ -1,3 +1,5 @@
+import { redirectToLogin } from './auth';
+
 /** fetch() for the app's own JSON API: throws an Error with the server's message on failure. */
 export async function api<T = unknown>(
   url: string,
@@ -10,6 +12,7 @@ export async function api<T = unknown>(
     headers: { ...(json === undefined ? {} : { 'content-type': 'application/json' }), ...headers },
     ...(json === undefined ? {} : { body: JSON.stringify(json) }),
   });
+  if (response.status === 401) redirectToLogin();
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { error?: string } | null;
     throw new Error(body?.error ?? `The server answered HTTP ${response.status}`);

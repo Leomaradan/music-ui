@@ -14,7 +14,7 @@ A self-hosted web music player in the style of a desktop music library: a column
 | Host | Unraid, x86-64 → image built for `linux/amd64` only |
 | Backend | **Navidrome ≥ 0.58** (multi-library; latest tag at time of writing: v0.64.2), with **one Navidrome library per music folder**. Libraries are exposed as Subsonic music folders (§4). The app only uses standard Subsonic endpoints plus a few OpenSubsonic fields, so Airsonic-Advanced stays a possible fallback |
 | Network | **LAN only**, plain HTTP. Navidrome is reachable only from the app container |
-| Accounts | **One shared Navidrome account** configured by env vars. The app has **no login screen** |
+| Accounts | **One shared Navidrome account** configured by env vars. The UI itself is behind a **login screen** with its own accounts, managed from the command line in the container (§6b). `AUTH_ENABLED=false` removes it |
 | Stack | Next.js (App Router, TypeScript) + Material UI, Node.js **26 LTS** (`node:26-alpine`) |
 | Music folders | First-class concept: the first filter box, and an "all folders" state when nothing is selected |
 
@@ -117,6 +117,8 @@ tracks (id, folderId, albumId, title, artist, artistId,
 track_genres(trackId, genre)  -- a track can have several genres (OpenSubsonic `genres[]`)
 meta   (key, value)        -- lastSync, lastModified, catalogVersion
 app_state(key, json)       -- sidebar playlist order, misc UI prefs
+users   (username COLLATE NOCASE, passwordHash, created)   -- UI accounts (§6b)
+sessions(tokenHash, username → users, created, expires)    -- login sessions
 ```
 
 **Sync algorithm:**
@@ -155,7 +157,17 @@ Only one sync runs at a time (in-process lock). Progress is available at `/api/c
 | `/api/playlists/order` | PUT | Saves the sidebar order in `app_state` |
 | `/api/queue` | GET / PUT | Navidrome play queue ("currently playing"): `{ids, index, position}`. Saved with `savePlayQueue` as a form POST (OpenSubsonic `formPost`), at most 5,000 tracks (a window around the current one) |
 
+| `/api/auth/login` | POST | `{username, password}` → session cookie (204), 401 on a wrong password, 429 after 5 failures in 15 min (per client address + username) |
+| `/api/auth/logout` | POST | Ends the session, clears the cookie |
+| `/api/auth/me` | GET | `{enabled, username}` (Settings shows "Signed in as …") |
+
 All routes use the Node runtime and are dynamic. Ids are validated with zod.
+
+### 6b. Authentication
+- **Login wall** in `src/proxy.ts` (Next 16 "proxy", formerly middleware; Node runtime, so it reads SQLite). Every page and API route needs a session, except `/login`, `/api/auth/login`, `/api/auth/logout` and `/api/health` (Docker healthcheck). Without one, pages redirect to `/login?next=…` and API calls get 401 (the client then goes to the login screen). `AUTH_ENABLED=false` turns it off (e.g. behind a reverse proxy that authenticates).
+- **Sessions:** a random 256-bit token in an `HttpOnly; SameSite=Lax` cookie (`Secure` over HTTPS, including behind a proxy sending `X-Forwarded-Proto`). Only its SHA-256 is stored. Sliding expiry: `SESSION_DAYS` after the last visit, renewed once half of it has passed.
+- **Passwords:** scrypt (N=16384, r=8, p=1, random salt), in `scripts/password.mjs`, shared by the server and the CLI. Unknown users cost the same time as wrong passwords.
+- **Accounts:** no sign-up or admin screen. `scripts/cli.mjs` (copied to `/app/cli.mjs` in the image, Node built-ins only) manages them: `user add|passwd|remove|list`, `sessions clear`. Changing a password or removing a user ends their sessions. The audio and cover requests are same-origin, so the cookie covers them too.
 
 ---
 
@@ -307,6 +319,8 @@ music-ui/
 | `DATA_DIR` | | `/data` | SQLite location (mount it as a volume) |
 | `PORT` | | `3000` | |
 | `LOG_LEVEL` | | `info` | |
+| `AUTH_ENABLED` | | `true` | Login screen in front of the UI (§6b) |
+| `SESSION_DAYS` | | `30` | Session lifetime after the last visit |
 
 ---
 
@@ -414,6 +428,11 @@ Two Vitest projects (`vitest.config.ts`), both run by `pnpm test` and in CI:
 | M9 | Playlists: sidebar list, DnD reorder, drag tracks → new playlist, rename/delete | The order persists, and playlists also show up in Navidrome |
 | M10 | Polish: keyboard shortcuts, Media Session, settings dialog (rescan, status), dark mode | Settings (gear in the player bar): Navidrome connection, sync status/progress, rescan; theme System/Light/Dark (saved per browser); reset sort and column widths; shortcuts list (also `?`). Track shown in the browser tab title |
 | M11 | Storybook + story tests (Vitest addon, §11) | Every component has stories whose play functions and a11y checks run in Chromium in `pnpm test` and CI |
+
+### Phase 3 — Features
+| # | Milestone | Done when |
+|---|---|---|
+| M12 | Login screen (§6b) | The UI and every API route except the healthcheck need a session; accounts are managed with `cli.mjs` in the container |
 
 ---
 
