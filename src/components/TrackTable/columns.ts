@@ -37,6 +37,19 @@ const genreText = (track: Track) => track.genres.join(', ');
 const formatText = (track: Track) =>
   [track.suffix, track.bitRate ? `${track.bitRate} kbps` : null].filter(Boolean).join(' · ');
 
+const titleColumn = helper.accessor('title', {
+  header: 'Title',
+  size: 240,
+  sortFn: byText((t) => t.title),
+});
+const durationColumn = helper.accessor('duration', {
+  header: 'Duration',
+  size: 90,
+  minSize: 60,
+  sortFn: byNumber((t) => t.duration),
+  cell: (info) => formatDuration(info.getValue()),
+});
+
 /** Track table columns (PLAN.md §7.4). */
 export const columns = helper.columns([
   helper.accessor('track', {
@@ -46,7 +59,7 @@ export const columns = helper.columns([
     sortFn: byNumber((t) => (t.track === null ? null : (t.disc ?? 0) * 10_000 + t.track)),
     cell: (info) => info.getValue() ?? '',
   }),
-  helper.accessor('title', { header: 'Title', size: 240, sortFn: byText((t) => t.title) }),
+  titleColumn,
   helper.accessor('artist', { header: 'Artist', size: 180, sortFn: byText((t) => t.artist) }),
   helper.accessor('album', { header: 'Album', size: 200, sortFn: byText((t) => t.album) }),
   helper.accessor(genreText, {
@@ -62,13 +75,7 @@ export const columns = helper.columns([
     sortFn: byNumber((t) => t.year),
     cell: (info) => info.getValue() ?? '',
   }),
-  helper.accessor('duration', {
-    header: 'Duration',
-    size: 90,
-    minSize: 60,
-    sortFn: byNumber((t) => t.duration),
-    cell: (info) => formatDuration(info.getValue()),
-  }),
+  durationColumn,
   helper.accessor('folderName', {
     id: 'folder',
     header: 'Folder',
@@ -82,3 +89,6 @@ export const columns = helper.columns([
     sortFn: byText(formatText),
   }),
 ]);
+
+/** Phone layout: the title (with artist and album under it) and the duration. */
+export const mobileColumns = helper.columns([titleColumn, durationColumn]);

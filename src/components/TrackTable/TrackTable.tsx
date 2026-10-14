@@ -3,6 +3,7 @@
 import {
   memo,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -13,7 +14,10 @@ import {
 import { flexRender, useTable, type Row } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
+import Divider from '@mui/material/Divider';
+import IconButton from '@mui/material/IconButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
@@ -24,12 +28,17 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import Typography from '@mui/material/Typography';
+import CloseIcon from '@mui/icons-material/Close';
+import MoreIcon from '@mui/icons-material/MoreVert';
 import PlayIcon from '@mui/icons-material/PlayArrow';
+import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd';
+import PlayNextIcon from '@mui/icons-material/PlaylistPlay';
+import QueueIcon from '@mui/icons-material/AddToQueue';
 import RemoveIcon from '@mui/icons-material/PlaylistRemove';
 import NowPlayingIcon from '@mui/icons-material/VolumeUp';
 import type { Track } from '@/client/catalog/decode';
 import { endTrackDrag, startTrackDrag } from '@/client/dnd';
-import { useTableTracks } from '@/client/hooks';
+import { useIsMobile, useTableTracks } from '@/client/hooks';
 import { clickSelection, moveSelection } from '@/client/selection';
 import { useCatalogStore } from '@/client/stores/catalogStore';
 import { useFilterStore } from '@/client/stores/filterStore';
@@ -42,9 +51,23 @@ import {
   useViewStore,
   type SortEntry,
 } from '@/client/stores/viewStore';
-import { columns, features } from './columns';
+import { addTracksToQueue, playTracksNext } from '@/client/trackActions';
+import AddToPlaylistMenu from '@/components/AddToPlaylistMenu/AddToPlaylistMenu';
+import { columns, features, mobileColumns } from './columns';
 
 export const ROW_HEIGHT = 32;
+/** Phone layout: two lines per row, easier to tap. */
+export const MOBILE_ROW_HEIGHT = 56;
+const MENU_CELL_WIDTH = 48;
+/** Read by screen readers only. */
+const VISUALLY_HIDDEN = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+} as const;
 
 type Updater<T> = T | ((previous: T) => T);
 const resolve = <T,>(updater: Updater<T>, previous: T): T =>
@@ -76,6 +99,9 @@ export default function TrackTable() {
   const currentIndex = usePlayerStore((state) => state.index);
   const playbackStatus = usePlayerStore((state) => state.status);
   const [menu, setMenu] = useState<{ top: number; left: number } | null>(null);
+  const [playlistMenu, setPlaylistMenu] = useState<{ top: number; left: number } | null>(null);
+  const isMobile = useIsMobile();
+  const rowHeight = isMobile ? MOBILE_ROW_HEIGHT : ROW_HEIGHT;
   const scrollRef = useRef<HTMLDivElement>(null);
   const isQueue = view === 'queue';
   const playlistId = playlistOfView(view);
@@ -97,7 +123,7 @@ export default function TrackTable() {
 
   const table = useTable({
     features,
-    columns,
+    columns: isMobile ? mobileColumns : columns,
     data,
     getRowId,
     state: { sorting: isOrdered ? NO_SORTING : sorting, columnSizing },
@@ -124,10 +150,12 @@ export default function TrackTable() {
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: () => rowHeight,
     getItemKey: (index) => rows[index]?.id ?? index,
     overscan: 15,
   });
+  // Rows change height between the desktop and phone layouts.
+  useEffect(() => virtualizer.measure(), [virtualizer, rowHeight]);
 
   /** The current track: its queue position in the queue, the track itself elsewhere. */
   const isCurrent = (row: { id: string; original: Track }) =>
@@ -154,8 +182,8 @@ export default function TrackTable() {
 
   // Row handlers read the latest state through a ref so they stay stable and memoized
   // rows only re-render when their own props change (smooth scrolling on large lists).
-  const latest = useRef({ selection, order, isQueue, rows });
-  latest.current = { selection, order, isQueue, rows };
+  const latest = useRef({ selection, order, isQueue, rows, isMobile });
+  latest.current = { selection, order, isQueue, rows, isMobile };
 
   /** Plays a row: in the queue, jumps to it; elsewhere, the listed rows become the queue. */
   const playRow = useCallback((id: string) => {
@@ -191,9 +219,24 @@ export default function TrackTable() {
     if (first) playRow(first);
   };
 
+  /** Track ids of the selected rows, in the order shown. */
+  const selectedTrackIds = () =>
+    rows.filter((row) => selection.ids.has(row.id)).map((row) => row.original.id);
+  const fromMenu = (action: (trackIds: string[]) => void) => () => {
+    setMenu(null);
+    action(selectedTrackIds());
+  };
+  const clearSelection = () => setSelection({ ids: new Set(), anchor: null });
+
   const onRowClick = useCallback(
     (event: MouseEvent, id: string) => {
-      const { selection: current, order: rowOrder } = latest.current;
+      const { selection: current, order: rowOrder, isMobile: touch } = latest.current;
+      if (touch) {
+        // Phones: a tap plays; once rows are selected (long press, ⋮), taps add or remove rows.
+        if (current.ids.size === 0) return playRow(id);
+        setSelection(clickSelection(current, rowOrder, id, { range: false, toggle: true }));
+        return;
+      }
       setSelection(
         clickSelection(current, rowOrder, id, {
           range: event.shiftKey,
@@ -201,7 +244,7 @@ export default function TrackTable() {
         }),
       );
     },
-    [setSelection],
+    [setSelection, playRow],
   );
 
   const onRowContextMenu = useCallback(
@@ -209,6 +252,17 @@ export default function TrackTable() {
       event.preventDefault();
       if (!latest.current.selection.ids.has(id)) setSelection({ ids: new Set([id]), anchor: id });
       setMenu({ top: event.clientY, left: event.clientX });
+    },
+    [setSelection],
+  );
+
+  /** The ⋮ button of a row (phones): the same menu, under the button. */
+  const onRowMenu = useCallback(
+    (event: MouseEvent, id: string) => {
+      event.stopPropagation();
+      if (!latest.current.selection.ids.has(id)) setSelection({ ids: new Set([id]), anchor: id });
+      const rect = event.currentTarget.getBoundingClientRect();
+      setMenu({ top: rect.bottom, left: rect.left });
     },
     [setSelection],
   );
@@ -242,106 +296,132 @@ export default function TrackTable() {
   };
 
   return (
-    <Box
-      ref={scrollRef}
-      tabIndex={0}
-      onKeyDown={onKeyDown}
-      sx={{
-        minHeight: 0,
-        overflow: 'auto',
-        position: 'relative',
-        outline: 'none',
-        '&:focus-visible': {
-          boxShadow: (theme) => `inset 0 0 0 2px ${theme.palette.primary.main}`,
-        },
-      }}
-    >
-      <Table
-        stickyHeader
-        size="small"
-        role="grid"
-        aria-label="Tracks"
-        aria-multiselectable
-        aria-rowcount={rows.length + 1}
-        sx={{ display: 'grid', width: totalWidth, minWidth: '100%' }}
+    <Box sx={{ display: 'grid', gridTemplateRows: 'minmax(0, 1fr) auto', minHeight: 0 }}>
+      <Box
+        ref={scrollRef}
+        tabIndex={0}
+        onKeyDown={onKeyDown}
+        sx={{
+          minHeight: 0,
+          overflow: 'auto',
+          position: 'relative',
+          outline: 'none',
+          '&:focus-visible': {
+            boxShadow: (theme) => `inset 0 0 0 2px ${theme.palette.primary.main}`,
+          },
+        }}
       >
-        <TableHead sx={{ display: 'grid', position: 'sticky', top: 0, zIndex: 1 }}>
-          {table.getHeaderGroups().map((group) => (
-            <TableRow key={group.id} sx={{ display: 'flex', width: '100%' }}>
-              {group.headers.map((header, i) => {
-                const sorted = header.column.getIsSorted();
-                const isLast = i === group.headers.length - 1;
-                return (
-                  <TableCell
-                    key={header.id}
-                    sortDirection={sorted || false}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      position: 'relative',
-                      width: header.getSize(),
-                      flex: isLast ? '1 0 auto' : 'none',
-                      fontWeight: 600,
-                      whiteSpace: 'nowrap',
-                      userSelect: 'none',
-                    }}
-                  >
-                    <TableSortLabel
-                      active={sorted !== false}
-                      direction={sorted || 'asc'}
-                      onClick={header.column.getToggleSortingHandler()}
-                      sx={{ minWidth: 0, overflow: 'hidden' }}
-                    >
-                      <table.FlexRender header={header} />
-                    </TableSortLabel>
-                    <Box
-                      aria-hidden
-                      onMouseDown={header.getResizeHandler()}
-                      onTouchStart={header.getResizeHandler()}
-                      onDoubleClick={() => header.column.resetSize()}
-                      sx={{
-                        position: 'absolute',
-                        right: 0,
-                        top: 0,
-                        height: '100%',
-                        width: 6,
-                        cursor: 'col-resize',
-                        touchAction: 'none',
-                        bgcolor: header.column.getIsResizing() ? 'primary.main' : 'transparent',
-                        '&:hover': { bgcolor: 'divider' },
-                      }}
-                    />
-                  </TableCell>
-                );
-              })}
-            </TableRow>
-          ))}
-        </TableHead>
-        <TableBody
-          sx={{ display: 'grid', height: virtualizer.getTotalSize(), position: 'relative' }}
+        <Table
+          stickyHeader
+          size="small"
+          role="grid"
+          aria-label="Tracks"
+          aria-multiselectable
+          aria-rowcount={rows.length + 1}
+          sx={{ display: 'grid', width: isMobile ? '100%' : totalWidth, minWidth: '100%' }}
         >
-          {virtualizer.getVirtualItems().map((item) => {
-            const row = rows[item.index];
-            if (!row) return null;
-            return (
-              <TrackRow
-                key={row.id}
-                row={row}
-                index={item.index}
-                start={item.start}
-                selected={selection.ids.has(row.id)}
-                current={isCurrent(row) ? (isPlaying ? 'playing' : 'paused') : null}
-                sizes={columnSizesKey}
-                onClick={onRowClick}
-                onDoubleClick={playRow}
-                onDragStart={onRowDragStart}
-                onContextMenu={onRowContextMenu}
-              />
-            );
-          })}
-        </TableBody>
-      </Table>
-      {rows.length === 0 && <EmptyState view={view} loading={playlistLoading} />}
+          <TableHead sx={{ display: 'grid', position: 'sticky', top: 0, zIndex: 1 }}>
+            {table.getHeaderGroups().map((group) => (
+              <TableRow key={group.id} sx={{ display: 'flex', width: '100%' }}>
+                {group.headers.map((header, i) => {
+                  const sorted = header.column.getIsSorted();
+                  const grows = isMobile ? i === 0 : i === group.headers.length - 1;
+                  return (
+                    <TableCell
+                      key={header.id}
+                      sortDirection={sorted || false}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        position: 'relative',
+                        width: header.getSize(),
+                        flex: growFlex(grows, isMobile),
+                        minWidth: 0,
+                        fontWeight: 600,
+                        whiteSpace: 'nowrap',
+                        userSelect: 'none',
+                      }}
+                    >
+                      <TableSortLabel
+                        active={sorted !== false}
+                        direction={sorted || 'asc'}
+                        onClick={header.column.getToggleSortingHandler()}
+                        sx={{ minWidth: 0, overflow: 'hidden' }}
+                      >
+                        <table.FlexRender header={header} />
+                      </TableSortLabel>
+                      {!isMobile && (
+                        <Box
+                          aria-hidden
+                          onMouseDown={header.getResizeHandler()}
+                          onTouchStart={header.getResizeHandler()}
+                          onDoubleClick={() => header.column.resetSize()}
+                          sx={{
+                            position: 'absolute',
+                            right: 0,
+                            top: 0,
+                            height: '100%',
+                            width: 6,
+                            cursor: 'col-resize',
+                            touchAction: 'none',
+                            bgcolor: header.column.getIsResizing() ? 'primary.main' : 'transparent',
+                            '&:hover': { bgcolor: 'divider' },
+                          }}
+                        />
+                      )}
+                    </TableCell>
+                  );
+                })}
+                {isMobile && (
+                  <TableCell sx={{ width: MENU_CELL_WIDTH, flex: 'none', p: 0 }}>
+                    <Box component="span" sx={VISUALLY_HIDDEN}>
+                      Actions
+                    </Box>
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+          </TableHead>
+          <TableBody
+            sx={{ display: 'grid', height: virtualizer.getTotalSize(), position: 'relative' }}
+          >
+            {virtualizer.getVirtualItems().map((item) => {
+              const row = rows[item.index];
+              if (!row) return null;
+              return (
+                <TrackRow
+                  key={row.id}
+                  row={row}
+                  index={item.index}
+                  start={item.start}
+                  selected={selection.ids.has(row.id)}
+                  current={isCurrent(row) ? (isPlaying ? 'playing' : 'paused') : null}
+                  sizes={columnSizesKey}
+                  onClick={onRowClick}
+                  onDoubleClick={playRow}
+                  onDragStart={onRowDragStart}
+                  onContextMenu={onRowContextMenu}
+                  compact={isMobile}
+                  onMenu={onRowMenu}
+                />
+              );
+            })}
+          </TableBody>
+        </Table>
+        {rows.length === 0 && <EmptyState view={view} loading={playlistLoading} />}
+      </Box>
+      {isMobile && hasSelection && (
+        <SelectionBar
+          count={selection.ids.size}
+          onPlay={playSelected}
+          onQueue={() => addTracksToQueue(selectedTrackIds())}
+          onPlaylist={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            setPlaylistMenu({ top: rect.top, left: rect.left });
+          }}
+          onClear={clearSelection}
+        />
+      )}
       <Menu
         open={menu !== null}
         onClose={() => setMenu(null)}
@@ -354,6 +434,32 @@ export default function TrackTable() {
           </ListItemIcon>
           Play
         </MenuItem>
+        <MenuItem onClick={fromMenu(playTracksNext)} disabled={!hasSelection}>
+          <ListItemIcon>
+            <PlayNextIcon fontSize="small" />
+          </ListItemIcon>
+          Play next
+        </MenuItem>
+        {!isQueue && (
+          <MenuItem onClick={fromMenu(addTracksToQueue)} disabled={!hasSelection}>
+            <ListItemIcon>
+              <QueueIcon fontSize="small" />
+            </ListItemIcon>
+            Add to queue
+          </MenuItem>
+        )}
+        <MenuItem
+          disabled={!hasSelection}
+          onClick={() => {
+            setPlaylistMenu(menu);
+            setMenu(null);
+          }}
+        >
+          <ListItemIcon>
+            <PlaylistAddIcon fontSize="small" />
+          </ListItemIcon>
+          Add to playlist…
+        </MenuItem>
         {!isDynamic && (
           <MenuItem onClick={removeSelected} disabled={!canRemove}>
             <ListItemIcon>
@@ -364,6 +470,11 @@ export default function TrackTable() {
           </MenuItem>
         )}
       </Menu>
+      <AddToPlaylistMenu
+        position={playlistMenu}
+        trackIds={playlistMenu ? selectedTrackIds() : []}
+        onClose={() => setPlaylistMenu(null)}
+      />
     </Box>
   );
 }
@@ -381,6 +492,15 @@ interface TrackRowProps {
   onDoubleClick(id: string): void;
   onDragStart(event: DragEvent, id: string): void;
   onContextMenu(event: MouseEvent, id: string): void;
+  /** Phone layout: two-line title, a ⋮ button, no drag. */
+  compact: boolean;
+  onMenu(event: MouseEvent, id: string): void;
+}
+
+/** How a column takes the free width: the last one on desktop, the title on phones. */
+function growFlex(grows: boolean, compact: boolean): string {
+  if (!grows) return 'none';
+  return compact ? '1 1 0' : '1 0 auto';
 }
 
 const TrackRow = memo(function TrackRow({
@@ -393,8 +513,11 @@ const TrackRow = memo(function TrackRow({
   onDoubleClick,
   onDragStart,
   onContextMenu,
+  compact,
+  onMenu,
 }: TrackRowProps) {
   const cells = row.getAllCells();
+  const track = row.original;
   return (
     <TableRow
       hover
@@ -403,16 +526,17 @@ const TrackRow = memo(function TrackRow({
       aria-rowindex={index + 2}
       aria-current={current ? 'true' : undefined}
       onClick={(event) => onClick(event, row.id)}
-      onDoubleClick={() => onDoubleClick(row.id)}
-      draggable
-      onDragStart={(event) => onDragStart(event, row.id)}
-      onDragEnd={endTrackDrag}
+      // Phones play on a single tap.
+      onDoubleClick={compact ? undefined : () => onDoubleClick(row.id)}
+      draggable={!compact}
+      onDragStart={compact ? undefined : (event) => onDragStart(event, row.id)}
+      onDragEnd={compact ? undefined : endTrackDrag}
       onContextMenu={(event) => onContextMenu(event, row.id)}
       sx={{
         display: 'flex',
         position: 'absolute',
         width: '100%',
-        height: ROW_HEIGHT,
+        height: compact ? MOBILE_ROW_HEIGHT : ROW_HEIGHT,
         transform: `translateY(${start}px)`,
         cursor: 'default',
         userSelect: 'none',
@@ -425,39 +549,154 @@ const TrackRow = memo(function TrackRow({
             display: 'flex',
             alignItems: 'center',
             width: cell.column.getSize(),
-            flex: i === cells.length - 1 ? '1 0 auto' : 'none',
+            flex: growFlex(compact ? i === 0 : i === cells.length - 1, compact),
+            minWidth: 0,
             overflow: 'hidden',
             borderBottom: 'none',
           }}
         >
-          <Box
-            component="span"
-            sx={{
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              fontWeight: current ? 600 : undefined,
-              color: current ? 'primary.main' : undefined,
-            }}
-          >
-            {i === 0 && current ? (
-              <NowPlayingIcon
-                aria-label={current === 'playing' ? 'Playing' : 'Paused'}
-                sx={{
-                  fontSize: 16,
-                  verticalAlign: 'middle',
-                  opacity: current === 'paused' ? 0.6 : 1,
-                }}
-              />
-            ) : (
-              flexRender(cell.column.columnDef.cell, cell.getContext())
-            )}
-          </Box>
+          {compact && cell.column.id === 'title' ? (
+            <CompactTitle track={track} current={current} />
+          ) : (
+            <CellContent cell={cell} first={i === 0} current={current} />
+          )}
         </TableCell>
       ))}
+      {compact && (
+        <TableCell sx={{ width: MENU_CELL_WIDTH, flex: 'none', p: 0, borderBottom: 'none' }}>
+          <IconButton
+            aria-label={`More actions for ${track.title}`}
+            onClick={(event) => onMenu(event, row.id)}
+            onDoubleClick={(event) => event.stopPropagation()}
+          >
+            <MoreIcon />
+          </IconButton>
+        </TableCell>
+      )}
     </TableRow>
   );
 });
+
+type Current = TrackRowProps['current'];
+
+/** The speaker shown on the current track: dimmed while paused. */
+function NowPlaying({ current, size }: Readonly<{ current: 'playing' | 'paused'; size: number }>) {
+  return (
+    <NowPlayingIcon
+      aria-label={current === 'playing' ? 'Playing' : 'Paused'}
+      color="primary"
+      sx={{
+        fontSize: size,
+        flex: 'none',
+        verticalAlign: 'middle',
+        opacity: current === 'paused' ? 0.6 : 1,
+      }}
+    />
+  );
+}
+
+/** A desktop cell: its value, ellipsised; the speaker in the first column of the current row. */
+function CellContent({
+  cell,
+  first,
+  current,
+}: Readonly<{
+  cell: ReturnType<Row<typeof features, Track>['getAllCells']>[number];
+  first: boolean;
+  current: Current;
+}>) {
+  return (
+    <Box
+      component="span"
+      sx={{
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        fontWeight: current ? 600 : undefined,
+        color: current ? 'primary.main' : undefined,
+      }}
+    >
+      {first && current ? (
+        <NowPlaying current={current} size={16} />
+      ) : (
+        flexRender(cell.column.columnDef.cell, cell.getContext())
+      )}
+    </Box>
+  );
+}
+
+/** Phone rows: the title over "artist · album". */
+function CompactTitle({ track, current }: Readonly<{ track: Track; current: Current }>) {
+  const subtitle = [track.artist, track.album].filter(Boolean).join(' · ');
+  return (
+    <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
+      {current && <NowPlaying current={current} size={18} />}
+      <Box sx={{ minWidth: 0 }}>
+        <Typography
+          variant="body2"
+          noWrap
+          sx={{ fontWeight: current ? 600 : 500, color: current ? 'primary.main' : undefined }}
+        >
+          {track.title}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" noWrap component="div">
+          {subtitle}
+        </Typography>
+      </Box>
+    </Box>
+  );
+}
+
+interface SelectionBarProps {
+  count: number;
+  onPlay(): void;
+  onQueue(): void;
+  onPlaylist(event: MouseEvent<HTMLElement>): void;
+  onClear(): void;
+}
+
+/** Phones: what to do with the selected rows (instead of dragging them to the sidebar). */
+function SelectionBar({
+  count,
+  onPlay,
+  onQueue,
+  onPlaylist,
+  onClear,
+}: Readonly<SelectionBarProps>) {
+  return (
+    <Box
+      role="toolbar"
+      aria-label="Selected tracks"
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 0.5,
+        px: 1,
+        py: 0.5,
+        borderTop: 1,
+        borderColor: 'divider',
+        bgcolor: 'action.selected',
+      }}
+    >
+      <IconButton aria-label="Clear selection" size="small" onClick={onClear}>
+        <CloseIcon fontSize="small" />
+      </IconButton>
+      <Typography variant="body2" sx={{ flex: 1 }} noWrap>
+        {count} selected
+      </Typography>
+      <Button size="small" startIcon={<PlayIcon />} onClick={onPlay}>
+        Play
+      </Button>
+      <Divider orientation="vertical" flexItem />
+      <IconButton aria-label="Add to queue" size="small" onClick={onQueue}>
+        <QueueIcon fontSize="small" />
+      </IconButton>
+      <IconButton aria-label="Add to playlist" size="small" onClick={onPlaylist}>
+        <PlaylistAddIcon fontSize="small" />
+      </IconButton>
+    </Box>
+  );
+}
 
 function removeLabel(isQueue: boolean, isPlaylist: boolean): string {
   if (isQueue) return 'Remove from queue';

@@ -21,6 +21,9 @@ export default defineConfig({
           environment: 'jsdom',
           globals: true,
           setupFiles: ['./vitest.setup.ts'],
+          // The jsdom UI tests render the whole app (~1.5 s for a file's first render); in CI
+          // they share the machine with the Chromium story tests, so 5 s is too tight.
+          testTimeout: 15_000,
           include: ['src/**/*.test.{ts,tsx}', 'tests/**/*.test.{ts,tsx}'],
         },
       },

@@ -284,6 +284,14 @@ Four boxes in a row: **Music Folder → Genre → Artist → Album**.
 | `playlistStore` | Playlists, order, cached tracks | Server (`/api/playlists`) |
 | `dynamicPlaylistStore` | Smart playlist definitions, editor state | Server (`/api/dynamic-playlists`) |
 
+### 7.6 Phone layout
+Below MUI's `md` breakpoint (900 px, `useIsMobile()` in `src/client/hooks.ts`) the page switches to one column. Server rendering and the first client render use the desktop layout, then the media query applies.
+- **Player bar:** ☰ (opens the sidebar), cover and title, play/pause, next and a ⋮ menu (previous, stop, settings) on one row; the seek slider and the playback mode on a second row. No volume slider (the phone's buttons do it).
+- **Sidebar:** a drawer, closed again once a list is chosen. No drag and drop: no drop zone, no reordering.
+- **Filters:** a bar (_Filters_, how many boxes are in use, clear all) opens a full-screen dialog with one box per tab (icons: folder, genre, artist, album, with the number of selected values). Same cascade; a tap adds or removes a value (no Ctrl/Shift on touch screens); _Show N tracks_ closes it.
+- **Track table:** title with "artist · album" under it, duration, and a ⋮ button per row; rows are taller and not draggable. A tap plays (the listed tracks become the queue). The ⋮ button or a long press selects the row and opens its menu; once rows are selected, taps add or remove rows and a bar at the bottom offers _Play_, _Add to queue_, _Add to playlist_ and clear.
+- **Adding tracks without drag and drop** (also in the desktop right-click menu): _Play next_ (right after the current track), _Add to queue_, _Add to playlist…_ (a writable playlist, or a new one).
+
 ---
 
 ## 8. Project structure
@@ -445,6 +453,7 @@ Two Vitest projects (`vitest.config.ts`), both run by `pnpm test` and in CI:
 |---|---|---|
 | M12 | Login screen (§6b) | The UI and every API route except the healthcheck need a session; accounts are managed with `cli.mjs` in the container |
 | M13 | Smart playlists (§7.2b) | Criteria on tags with all/any; the lists follow each library sync |
+| M14 | Phone layout (§7.6) | Usable on a phone: no horizontal scroll, every action reachable without drag and drop |
 
 ---
 

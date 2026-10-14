@@ -24,6 +24,8 @@ import { useCatalogStore } from '@/client/stores/catalogStore';
 import { useFilterStore } from '@/client/stores/filterStore';
 
 const ROW_HEIGHT = 30;
+/** Phones: bigger targets. */
+const TOUCH_ROW_HEIGHT = 44;
 
 export interface FilterBoxProps<L extends FilterLevel> {
   level: L;
@@ -32,6 +34,8 @@ export interface FilterBoxProps<L extends FilterLevel> {
   selected: Filters[L];
   /** Tracks this box chooses from (shown on the "All" entry). */
   total: number;
+  /** Phones: a tap adds or removes a value (no Ctrl/Shift), values are not draggable. */
+  touch?: boolean;
 }
 
 const normalize = (text: string) =>
@@ -52,7 +56,9 @@ export default function FilterBox<L extends FilterLevel>({
   options,
   selected,
   total,
+  touch = false,
 }: FilterBoxProps<L>) {
+  const rowHeight = touch ? TOUCH_ROW_HEIGHT : ROW_HEIGHT;
   const setLevel = useFilterStore((state) => state.setLevel);
   const [query, setQuery] = useState('');
   /** Fixed end of Shift ranges: the last value clicked without Shift. */
@@ -75,7 +81,7 @@ export default function FilterBox<L extends FilterLevel>({
   const virtualizer = useVirtualizer({
     count,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: () => rowHeight,
     overscan: 10,
   });
 
@@ -104,7 +110,9 @@ export default function FilterBox<L extends FilterLevel>({
       { ids: selectedKeys, anchor },
       visible.map((o) => String(o.value)),
       String(option.value),
-      { range: event.shiftKey, toggle: event.ctrlKey || event.metaKey },
+      touch
+        ? { range: false, toggle: true }
+        : { range: event.shiftKey, toggle: event.ctrlKey || event.metaKey },
     );
     setAnchor(next.anchor);
     // Keep the box's order; values hidden by the search stay selected only with Ctrl.
@@ -188,15 +196,15 @@ export default function FilterBox<L extends FilterLevel>({
                 dense
                 selected={isSelected}
                 onClick={(event) => (isAll ? clear() : select(event, option!))}
-                draggable={!isAll}
-                onDragStart={isAll ? undefined : (event) => onDragStart(event, option!)}
-                onDragEnd={isAll ? undefined : endTrackDrag}
+                draggable={!isAll && !touch}
+                onDragStart={isAll || touch ? undefined : (event) => onDragStart(event, option!)}
+                onDragEnd={isAll || touch ? undefined : endTrackDrag}
                 sx={{
                   position: 'absolute',
                   top: 0,
                   left: 0,
                   width: '100%',
-                  height: ROW_HEIGHT,
+                  height: rowHeight,
                   transform: `translateY(${item.start}px)`,
                   px: 1.5,
                   gap: 0.5,

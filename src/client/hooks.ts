@@ -1,6 +1,8 @@
 'use client';
 
 import { useMemo } from 'react';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import type { Theme } from '@mui/material/styles';
 import type { Track } from '@/client/catalog/decode';
 import { matchTracks } from '@/client/catalog/dynamic';
 import { getFacets, type Facets } from '@/client/catalog/facets';
@@ -72,6 +74,15 @@ export function useTableTracks(): Track[] {
     const hidden = new Set(excluded);
     return facets.tracks.filter((track) => !hidden.has(track.id));
   }, [facets, queueTracks, playlistTracks, dynamicTracks, excluded, view]);
+}
+
+/**
+ * Phone-sized screen (below MUI's `md` breakpoint, 900 px): one column, the sidebar in a drawer,
+ * the filters in a dialog, no drag and drop. False during server rendering and the first
+ * client render, so they match.
+ */
+export function useIsMobile(): boolean {
+  return useMediaQuery((theme: Theme) => theme.breakpoints.down('md'));
 }
 
 /** The track being played (or paused), if any. */
