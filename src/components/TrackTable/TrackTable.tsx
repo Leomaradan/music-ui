@@ -558,29 +558,7 @@ const TrackRow = memo(function TrackRow({
           {compact && cell.column.id === 'title' ? (
             <CompactTitle track={track} current={current} />
           ) : (
-            <Box
-              component="span"
-              sx={{
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                fontWeight: current ? 600 : undefined,
-                color: current ? 'primary.main' : undefined,
-              }}
-            >
-              {i === 0 && current ? (
-                <NowPlayingIcon
-                  aria-label={current === 'playing' ? 'Playing' : 'Paused'}
-                  sx={{
-                    fontSize: 16,
-                    verticalAlign: 'middle',
-                    opacity: current === 'paused' ? 0.6 : 1,
-                  }}
-                />
-              ) : (
-                flexRender(cell.column.columnDef.cell, cell.getContext())
-              )}
-            </Box>
+            <CellContent cell={cell} first={i === 0} current={current} />
           )}
         </TableCell>
       ))}
@@ -599,21 +577,60 @@ const TrackRow = memo(function TrackRow({
   );
 });
 
-/** Phone rows: the title over "artist · album". */
-function CompactTitle({
-  track,
+type Current = TrackRowProps['current'];
+
+/** The speaker shown on the current track: dimmed while paused. */
+function NowPlaying({ current, size }: Readonly<{ current: 'playing' | 'paused'; size: number }>) {
+  return (
+    <NowPlayingIcon
+      aria-label={current === 'playing' ? 'Playing' : 'Paused'}
+      color="primary"
+      sx={{
+        fontSize: size,
+        flex: 'none',
+        verticalAlign: 'middle',
+        opacity: current === 'paused' ? 0.6 : 1,
+      }}
+    />
+  );
+}
+
+/** A desktop cell: its value, ellipsised; the speaker in the first column of the current row. */
+function CellContent({
+  cell,
+  first,
   current,
-}: Readonly<{ track: Track; current: TrackRowProps['current'] }>) {
+}: Readonly<{
+  cell: ReturnType<Row<typeof features, Track>['getAllCells']>[number];
+  first: boolean;
+  current: Current;
+}>) {
+  return (
+    <Box
+      component="span"
+      sx={{
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        fontWeight: current ? 600 : undefined,
+        color: current ? 'primary.main' : undefined,
+      }}
+    >
+      {first && current ? (
+        <NowPlaying current={current} size={16} />
+      ) : (
+        flexRender(cell.column.columnDef.cell, cell.getContext())
+      )}
+    </Box>
+  );
+}
+
+/** Phone rows: the title over "artist · album". */
+function CompactTitle({ track, current }: Readonly<{ track: Track; current: Current }>) {
   const subtitle = [track.artist, track.album].filter(Boolean).join(' · ');
   return (
     <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
-      {current && (
-        <NowPlayingIcon
-          aria-label={current === 'playing' ? 'Playing' : 'Paused'}
-          color="primary"
-          sx={{ fontSize: 18, flex: 'none', opacity: current === 'paused' ? 0.6 : 1 }}
-        />
-      )}
+      {current && <NowPlaying current={current} size={18} />}
       <Box sx={{ minWidth: 0 }}>
         <Typography
           variant="body2"

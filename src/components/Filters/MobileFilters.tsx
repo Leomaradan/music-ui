@@ -11,9 +11,13 @@ import IconButton from '@mui/material/IconButton';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
+import AlbumIcon from '@mui/icons-material/Album';
+import GenreIcon from '@mui/icons-material/Category';
 import CloseIcon from '@mui/icons-material/Close';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/FilterListOff';
+import FolderIcon from '@mui/icons-material/Folder';
+import ArtistIcon from '@mui/icons-material/People';
 import { FILTER_LEVELS, type FilterLevel } from '@/client/catalog/facets';
 import { formatCount } from '@/client/format';
 import { useFacets } from '@/client/hooks';
@@ -21,6 +25,14 @@ import { useFilterStore } from '@/client/stores/filterStore';
 import { useUiStore } from '@/client/stores/uiStore';
 import FilterBox from './FilterBox';
 import { FILTER_BOXES } from './Filters';
+
+/** Tab icons: the four tabs fit on a phone screen without scrolling. */
+const TAB_ICONS: Record<FilterLevel, React.ReactElement> = {
+  folders: <FolderIcon />,
+  genres: <GenreIcon />,
+  artists: <ArtistIcon />,
+  albums: <AlbumIcon />,
+};
 
 const clearAll = () => useFilterStore.getState().setLevel(FILTER_LEVELS[0]!, []);
 const setOpen = (open: boolean) => useUiStore.getState().setFiltersOpen(open);
@@ -80,15 +92,19 @@ function FiltersDialog() {
       <Tabs
         value={tab}
         onChange={(_, value: FilterLevel) => setTab(value)}
-        variant="scrollable"
-        allowScrollButtonsMobile
+        variant="fullWidth"
         sx={{ borderBottom: 1, borderColor: 'divider' }}
       >
         {FILTER_BOXES.map(({ level, title }) => (
           <Tab
             key={level}
             value={level}
-            label={filters[level].length ? `${title} (${filters[level].length})` : title}
+            aria-label={filters[level].length ? `${title} (${filters[level].length})` : title}
+            icon={
+              <Badge badgeContent={filters[level].length} color="primary">
+                {TAB_ICONS[level]}
+              </Badge>
+            }
           />
         ))}
       </Tabs>
